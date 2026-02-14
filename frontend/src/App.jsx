@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import ScrapingPanel from "./ScrapingPanel";
 
 const DEFAULT_COORDS = { lat: 48.2082, lon: 16.3738 }; // Vienna
 
@@ -9,7 +10,12 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("events"); // "places" or "events"
+  const [activeTab, setActiveTab] = useState("events"); // "places", "events", or "admin"
+
+  // Load data on initial mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -31,8 +37,8 @@ export default function App() {
       const placesData = await placesResponse.json();
       setPlaces(placesData);
 
-      // Fetch events
-      const eventsUrl = `${base}/api/events/nearby?lat=${coords.lat}&lon=${coords.lon}&radius=10`;
+      // Fetch all events (including scraped ones)
+      const eventsUrl = `${base}/api/events`;
       const eventsResponse = await fetch(eventsUrl);
       if (!eventsResponse.ok) {
         throw new Error(`Events request failed with ${eventsResponse.status}`);
@@ -62,36 +68,12 @@ export default function App() {
     <div className="page">
       <header className="header">
         <h1>EventFinder</h1>
-        <p>Find interesting places and events near your location.</p>
+        <p>Discover events and places in Vienna</p>
       </header>
 
       <section className="controls">
-        <div className="field">
-          <label htmlFor="lat">Latitude</label>
-          <input
-            id="lat"
-            type="number"
-            step="0.0001"
-            value={coords.lat}
-            onChange={(event) =>
-              setCoords({ ...coords, lat: Number(event.target.value) })
-            }
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="lon">Longitude</label>
-          <input
-            id="lon"
-            type="number"
-            step="0.0001"
-            value={coords.lon}
-            onChange={(event) =>
-              setCoords({ ...coords, lon: Number(event.target.value) })
-            }
-          />
-        </div>
         <button onClick={fetchData} disabled={loading}>
-          {loading ? "Loading..." : "Search"}
+          {loading ? "Loading..." : "Refresh Data"}
         </button>
       </section>
 
@@ -109,6 +91,12 @@ export default function App() {
           onClick={() => setActiveTab("places")}
         >
           Places ({places.length})
+        </button>
+        <button 
+          className={activeTab === "admin" ? "active" : ""} 
+          onClick={() => setActiveTab("admin")}
+        >
+          Admin
         </button>
       </section>
 
@@ -169,6 +157,8 @@ export default function App() {
             )}
           </>
         )}
+
+        {activeTab === "admin" && <ScrapingPanel />}
       </section>
     </div>
   );

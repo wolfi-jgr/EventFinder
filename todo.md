@@ -1,4 +1,4 @@
--> integration for real searches 
+-> integration for real searches -> personalize!!
 -> filter (date range, category, price)
 -> sorting options (by date, distance, price) maybe radius slider
 -> login prompt with process (+Security, Roles, Users)
