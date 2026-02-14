@@ -1,0 +1,74 @@
+:root {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: #0d0d0d;
+  background: #f4f0ea;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 3rem 8vw;
+  background: radial-gradient(circle at top, #ffe6c4, #f4f0ea 55%);
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: clamp(2.5rem, 4vw, 4rem);
+  margin-bottom: 0.5rem;
+}
+
+.controls {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+input {
+  border: 1px solid #0d0d0d;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+}
+
+button {
+  background: #ff8a3d;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.results ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.results li {
+  background: white;
+  padding: 1rem 1.2rem;
+  border-radius: 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.results a {
+  color: #ff8a3d;
+  font-weight: 600;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 600;
+}
