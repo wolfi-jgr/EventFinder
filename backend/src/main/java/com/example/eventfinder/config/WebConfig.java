@@ -10,6 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors-origins}")
     private String corsOrigins;
 
+    @SuppressWarnings("null") //maybe chanage this to not nullable?
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")

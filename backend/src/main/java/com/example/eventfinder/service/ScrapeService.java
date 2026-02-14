@@ -4,7 +4,6 @@ import com.example.eventfinder.model.Event;
 import com.example.eventfinder.model.Place;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
