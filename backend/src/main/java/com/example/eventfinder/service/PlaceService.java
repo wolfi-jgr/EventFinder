@@ -1,4 +1,4 @@
-package main.java.com.example.eventfinder.service;
+package com.example.eventfinder.service;
 
 import com.example.eventfinder.model.Place;
 import com.example.eventfinder.repository.PlaceRepository;

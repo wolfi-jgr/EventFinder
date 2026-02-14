@@ -1,4 +1,4 @@
-package main.java.com.example.eventfinder.model;
+package com.example.eventfinder.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
