@@ -115,6 +115,11 @@ button:disabled {
   font-weight: 600;
 }
 
+.success {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
 /* Event-specific styles */
 .event-list {
   display: grid;

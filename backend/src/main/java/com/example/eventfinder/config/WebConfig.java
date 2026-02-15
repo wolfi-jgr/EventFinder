@@ -10,12 +10,20 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors-origins}")
     private String corsOrigins;
 
-    @SuppressWarnings("null") //maybe chanage this to not nullable?
+    @SuppressWarnings("null")
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins(corsOrigins.split(","))
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowCredentials(true);
+        // Check if wildcard is specified for local development
+        if (corsOrigins.contains("*")) {
+            registry.addMapping("/api/**")
+                    .allowedOriginPatterns("*")
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowCredentials(true);
+        } else {
+            registry.addMapping("/api/**")
+                    .allowedOrigins(corsOrigins.split(","))
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowCredentials(true);
+        }
     }
 }

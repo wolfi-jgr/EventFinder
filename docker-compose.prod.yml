@@ -1,0 +1,53 @@
+# Production Docker Compose Configuration
+# This is for running the production build locally to test before deploying
+
+services:
+  db:
+    image: postgres:16
+    container_name: eventfinder_db_prod
+    environment:
+      POSTGRES_DB: eventfinder
+      POSTGRES_USER: eventfinder
+      POSTGRES_PASSWORD: eventfinder
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventfinder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eventfinder_backend_prod
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/eventfinder
+      SPRING_DATASOURCE_USERNAME: eventfinder
+      SPRING_DATASOURCE_PASSWORD: eventfinder
+      APP_CORS_ORIGINS: "*"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: http://localhost:8080
+    container_name: eventfinder_frontend_prod
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data_prod:

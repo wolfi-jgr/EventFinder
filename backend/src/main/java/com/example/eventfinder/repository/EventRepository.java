@@ -32,4 +32,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
         @Param("minLon") Double minLon,
         @Param("maxLon") Double maxLon
     );
+    
+    // Find duplicate event by title, start date, and location (for deduplication during scraping)
+    @Query("SELECT e FROM Event e WHERE LOWER(e.title) = LOWER(:title) AND e.startDateTime = :startDateTime AND LOWER(e.location) = LOWER(:location)")
+    List<Event> findDuplicateEvents(
+        @Param("title") String title,
+        @Param("startDateTime") LocalDateTime startDateTime,
+        @Param("location") String location
+    );
 }

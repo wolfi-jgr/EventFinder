@@ -1,0 +1,49 @@
+# Render.com configuration for EventFinder
+# Alternative to Railway
+
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: eventfinder-db
+    env: docker
+    plan: free
+    
+  # Backend Service
+  - type: web
+    name: eventfinder-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: eventfinder-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: eventfinder-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: eventfinder-db
+          property: password
+      - key: APP_CORS_ORIGINS
+        value: "*"
+    
+  # Frontend Service
+  - type: web
+    name: eventfinder-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          name: eventfinder-backend
+          type: web
+          property: host
+
+databases:
+  - name: eventfinder-db
+    databaseName: eventfinder
+    plan: free

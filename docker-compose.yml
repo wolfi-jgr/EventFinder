@@ -22,7 +22,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/eventfinder
       SPRING_DATASOURCE_USERNAME: eventfinder
       SPRING_DATASOURCE_PASSWORD: eventfinder
-      APP_CORS_ORIGINS: http://localhost:5173
+      APP_CORS_ORIGINS: "*"
     ports:
       - "8080:8080"
     command: mvn spring-boot:run -DskipTests
@@ -36,6 +36,8 @@ services:
     volumes:
       - ./frontend:/workspace
     environment:
+      # Local development - uses localhost
+      # The config.js will automatically handle API calls
       VITE_API_BASE: http://localhost:8080
     ports:
       - "5173:5173"

@@ -1,13 +1,28 @@
 FROM node:20-alpine
 
 WORKDIR /app
-COPY package.json /app
-COPY vite.config.js /app
-COPY index.html /app
-COPY src /app/src
 
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install
+
+# Copy application files
+COPY . .
+
+# Build argument for API URL (set at build time)
+ARG VITE_API_BASE
+ENV VITE_API_BASE=${VITE_API_BASE}
+
+# Build the app
 RUN npm run build
 
-EXPOSE 4173
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "4173"]
+# Install serve to run the production build
+RUN npm install -g serve
+
+# Expose port
+EXPOSE 3000
+
+# Serve the built app
+CMD ["serve", "-s", "dist", "-l", "3000"]

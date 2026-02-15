@@ -63,6 +63,9 @@ public class ScraperManager {
         }
         
         int totalEvents = 0;
+        int totalNewEvents = 0;
+        int totalDuplicates = 0;
+        int totalUpdated = 0;
         int successCount = 0;
         int failureCount = 0;
         List<String> errors = new ArrayList<>();
@@ -71,6 +74,9 @@ public class ScraperManager {
             try {
                 ScrapingResult result = future.get(60, TimeUnit.SECONDS); // 60 second timeout per source
                 totalEvents += result.eventCount;
+                totalNewEvents += result.newEventCount;
+                totalDuplicates += result.duplicateCount;
+                totalUpdated += result.updatedCount;
                 
                 if (result.success) {
                     successCount++;
@@ -89,13 +95,17 @@ public class ScraperManager {
             }
         }
         
-        results.put("totalEvents", totalEvents);
+        results.put("totalEvents", totalNewEvents); // Return only new events to match frontend expectation
+        results.put("newEvents", totalNewEvents);
+        results.put("duplicates", totalDuplicates);
+        results.put("updated", totalUpdated);
+        results.put("totalProcessed", totalEvents);
         results.put("successCount", successCount);
         results.put("failureCount", failureCount);
         results.put("errors", errors);
         
-        logger.info("Scraping completed: {} events from {} sources ({} successful, {} failed)", 
-            totalEvents, sources.size(), successCount, failureCount);
+        logger.info("Scraping completed: {} new, {} duplicates, {} updated from {} sources ({} successful, {} failed)", 
+            totalNewEvents, totalDuplicates, totalUpdated, sources.size(), successCount, failureCount);
         
         return results;
     }
@@ -126,9 +136,19 @@ public class ScraperManager {
             List<Event> events = scraper.scrapeEvents(source.getUrl());
             
             if (events != null && !events.isEmpty()) {
-                List<Event> savedEvents = eventService.saveAllEvents(events);
-                result.eventCount = savedEvents.size();
-                logger.info("Successfully scraped {} events from {}", savedEvents.size(), source.getName());
+                // Use deduplication to avoid saving duplicate events
+                EventService.SaveResult saveResult = eventService.saveEventsWithDeduplication(events);
+                result.eventCount = saveResult.getTotalProcessed();
+                result.newEventCount = saveResult.getNewEvents();
+                result.duplicateCount = saveResult.getDuplicateEvents();
+                result.updatedCount = saveResult.getUpdatedEvents();
+                
+                logger.info("Scraped from {}: {} new, {} duplicates, {} updated (total processed: {})", 
+                    source.getName(), 
+                    saveResult.getNewEvents(),
+                    saveResult.getDuplicateEvents(),
+                    saveResult.getUpdatedEvents(),
+                    saveResult.getTotalProcessed());
             } else {
                 logger.warn("No events found from {}", source.getName());
             }
@@ -168,6 +188,9 @@ public class ScraperManager {
     public static class ScrapingResult {
         public boolean success;
         public int eventCount;
+        public int newEventCount;
+        public int duplicateCount;
+        public int updatedCount;
         public String sourceName;
         public String errorMessage;
     }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./ScrapingPanel.css";
+import { API_BASE } from "./config";
 
 export default function ScrapingPanel() {
   const [sources, setSources] = useState([]);
@@ -7,13 +8,11 @@ export default function ScrapingPanel() {
   const [message, setMessage] = useState("");
   const [scrapingResult, setScrapingResult] = useState(null);
 
-  const baseUrl = import.meta.env.VITE_API_BASE || "http://localhost:8080";
-
   const initializeSources = async () => {
     setLoading(true);
     setMessage("");
     try {
-      const response = await fetch(`${baseUrl}/api/sources/initialize`, {
+      const response = await fetch(`${API_BASE}/api/sources/initialize`, {
         method: "POST",
       });
       const text = await response.text();
@@ -29,7 +28,7 @@ export default function ScrapingPanel() {
   const loadSources = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${baseUrl}/api/sources`);
+      const response = await fetch(`${API_BASE}/api/sources`);
       const data = await response.json();
       setSources(data);
     } catch (err) {
@@ -44,7 +43,7 @@ export default function ScrapingPanel() {
     setMessage("Scraping in progress... this may take a minute...");
     setScrapingResult(null);
     try {
-      const response = await fetch(`${baseUrl}/api/scraping/run`, {
+      const response = await fetch(`${API_BASE}/api/scraping/run`, {
         method: "POST",
       });
       const result = await response.json();
@@ -63,7 +62,7 @@ export default function ScrapingPanel() {
 
   const toggleSource = async (id) => {
     try {
-      await fetch(`${baseUrl}/api/sources/${id}/toggle`, {
+      await fetch(`${API_BASE}/api/sources/${id}/toggle`, {
         method: "POST",
       });
       await loadSources();
@@ -76,7 +75,7 @@ export default function ScrapingPanel() {
     setLoading(true);
     setMessage("Fixing scraper types...");
     try {
-      const response = await fetch(`${baseUrl}/api/sources/fix-scrapers`, {
+      const response = await fetch(`${API_BASE}/api/sources/fix-scrapers`, {
         method: "POST",
       });
       const text = await response.text();

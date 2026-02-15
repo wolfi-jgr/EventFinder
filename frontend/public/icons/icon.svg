@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#4f46e5" rx="80"/>
+  <g fill="white">
+    <!-- Calendar icon -->
+    <rect x="128" y="140" width="256" height="280" rx="20" fill="none" stroke="white" stroke-width="24"/>
+    <rect x="128" y="180" width="256" height="60" fill="white"/>
+    <line x1="180" y1="140" x2="180" y2="100" stroke="white" stroke-width="24" stroke-linecap="round"/>
+    <line x1="332" y1="140" x2="332" y2="100" stroke="white" stroke-width="24" stroke-linecap="round"/>
+    <!-- Stars/events -->
+    <circle cx="200" cy="300" r="16" fill="white"/>
+    <circle cx="280" cy="300" r="16" fill="white"/>
+    <circle cx="200" cy="360" r="16" fill="white"/>
+    <circle cx="280" cy="360" r="16" fill="white"/>
+  </g>
+</svg>

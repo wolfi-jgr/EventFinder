@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import ScrapingPanel from "./ScrapingPanel";
+import { API_BASE } from "./config";
 
 const DEFAULT_COORDS = { lat: 48.2082, lon: 16.3738 }; // Vienna
 
@@ -10,26 +11,22 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadingMessage, setLoadingMessage] = useState("");
   const [activeTab, setActiveTab] = useState("events"); // "places", "events", or "admin"
 
-  // Load data on initial mount
+  // Load data on initial mount (without scraping)
   useEffect(() => {
-    fetchData();
+    loadDataFromDatabase();
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const loadDataFromDatabase = async () => {
     setLoading(true);
+    setLoadingMessage("Loading data...");
     setError("");
 
     try {
-      const base = import.meta.env.VITE_API_BASE || "http://localhost:8080";
-      
       // Fetch places
-      const placesUrl = `${base}/api/places?lat=${coords.lat}&lon=${coords.lon}`;
+      const placesUrl = `${API_BASE}/api/places?lat=${coords.lat}&lon=${coords.lon}`;
       const placesResponse = await fetch(placesUrl);
       if (!placesResponse.ok) {
         throw new Error(`Places request failed with ${placesResponse.status}`);
@@ -38,7 +35,7 @@ export default function App() {
       setPlaces(placesData);
 
       // Fetch all events (including scraped ones)
-      const eventsUrl = `${base}/api/events`;
+      const eventsUrl = `${API_BASE}/api/events`;
       const eventsResponse = await fetch(eventsUrl);
       if (!eventsResponse.ok) {
         throw new Error(`Events request failed with ${eventsResponse.status}`);
@@ -49,6 +46,57 @@ export default function App() {
       setError(err.message || "Request failed");
     } finally {
       setLoading(false);
+      setLoadingMessage("");
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    setLoadingMessage("Scraping events...");
+    setError("");
+
+    try {
+      // Step 1: Run scraper to get fresh events
+      const scrapingResponse = await fetch(`${API_BASE}/api/scraping/run`, {
+        method: "POST",
+      });
+      
+      if (!scrapingResponse.ok) {
+        throw new Error(`Scraping failed with ${scrapingResponse.status}`);
+      }
+
+      const scrapingResult = await scrapingResponse.json();
+      console.log("Scraping completed:", scrapingResult);
+
+      // Step 2: Load fresh data from database
+      setLoadingMessage("Loading fresh data...");
+      await loadDataFromDatabase();
+      
+      setLoadingMessage("");
+      
+      // Show detailed results
+      const newEvents = scrapingResult.newEvents || scrapingResult.totalEvents || 0;
+      const duplicates = scrapingResult.duplicates || 0;
+      const updated = scrapingResult.updated || 0;
+      
+      if (newEvents > 0 || updated > 0) {
+        let message = `✓ Scraping complete! ${newEvents} new event${newEvents !== 1 ? 's' : ''}`;
+        if (updated > 0) {
+          message += `, ${updated} updated`;
+        }
+        if (duplicates > 0) {
+          message += `, ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+        }
+        setError(message);
+      } else if (duplicates > 0) {
+        setError(`✓ Scraping complete! ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} found (no new events)`);
+      } else {
+        setError("Scraping completed, but no events found.");
+      }
+    } catch (err) {
+      setError(err.message || "Scraping failed");
+      setLoading(false);
+      setLoadingMessage("");
     }
   };
 
@@ -60,8 +108,9 @@ export default function App() {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      hour12: false
+    }) + 'Uhr';
   };
 
   return (
@@ -73,11 +122,11 @@ export default function App() {
 
       <section className="controls">
         <button onClick={fetchData} disabled={loading}>
-          {loading ? "Loading..." : "Refresh Data"}
+          {loading ? loadingMessage || "Loading..." : "Refresh Data"}
         </button>
       </section>
 
-      {error && <p className="error">{error}</p>}
+      {error && <p className={error.startsWith('✓') ? "success" : "error"}>{error}</p>}
 
       <section className="tabs">
         <button 

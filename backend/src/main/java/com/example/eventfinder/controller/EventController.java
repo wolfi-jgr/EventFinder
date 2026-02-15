@@ -122,6 +122,19 @@ public class EventController {
     }
 
     /**
+     * DELETE /api/events - Delete all events (reset database)
+     */
+    @DeleteMapping
+    public ResponseEntity<?> deleteAllEvents() {
+        long deletedCount = eventService.deleteAllEvents();
+        return ResponseEntity.ok()
+                .body(java.util.Map.of(
+                    "message", "All events deleted successfully",
+                    "deletedCount", deletedCount
+                ));
+    }
+
+    /**
      * POST /api/events/fetch - Fetch and save events from external sources
      * Example: /api/events/fetch?lat=52.5200&lon=13.4050
      */
