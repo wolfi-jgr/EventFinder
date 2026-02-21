@@ -26,3 +26,8 @@ Frontend:
 ## Notes
 - The scraper is a stub (see ScrapeService). Replace it later with real HTTP scraping/API calls.
 - Data caching/storage is done in Postgres for performance.
+
+## Mobile (Expo)
+- A separate mobile client is available in `mobile-expo/`.
+- Setup guide: `EXPO_MOBILE.md`
+- Includes: localtunnel setup, tunnel password notes, and troubleshooting for phone testing.
