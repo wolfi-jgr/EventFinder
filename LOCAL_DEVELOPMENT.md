@@ -18,6 +18,10 @@ docker-compose up
 - Backend API: http://localhost:8080/api
 - Database: localhost:5432
 
+**Docker volumes:**
+- `db_data` - PostgreSQL database storage (persists between restarts)
+- `scraper_data` - Cached HTML from scraped websites (persists between restarts)
+
 **Stop the app:**
 ```powershell
 # Press Ctrl+C, then:
@@ -147,6 +151,67 @@ API_BASE = "https://your-backend.railway.app"
 
 ---
 
+## 🕷️ Web Scraping System
+
+EventFinder uses a **rule-based generic scraper** to extract events from multiple websites.
+
+### How It Works
+
+1. **ScrapeRule Configuration** - Database stores CSS selectors/regex patterns for each website
+2. **HTML Caching** - Downloads HTML once per day, stores in `/app/scraper-data` volume
+3. **Generic Extraction** - Single scraper handles all sites using stored rules
+4. **Deduplication** - SHA256 hash prevents duplicate events
+5. **AI Fallback** - (Coming soon) Falls back to AI when rule-based parsing fails
+
+### Configured Websites
+
+- **theloft.at** - Cultural venue (regex extraction for text format)
+- **grelleforelle.com** - Electronic music venue (CSS selectors)
+- **daswerk.org** - Cultural center (CSS selectors with German dates)
+- **savedate.io/@prst** - Event platform (CSS selectors with data attributes)
+
+### Scraping API Endpoints
+
+```bash
+# Run scraping for all enabled sites
+POST /api/scraping/rules/run
+
+# Scrape specific site
+POST /api/scraping/rules/site/{siteName}
+
+# View site configurations and stats
+GET /api/scraping/rules/status
+
+# Clear cached HTML
+DELETE /api/scraping/cache/{siteName}
+```
+
+### Managing ScrapeRules
+
+```sql
+-- Connect to database
+docker exec -it eventfinder_db psql -U eventfinder -d eventfinder
+
+-- View all scrape rules
+SELECT site_name, enabled, extraction_mode, ai_enabled FROM scrape_rules;
+
+-- Disable a site
+UPDATE scrape_rules SET enabled = false WHERE site_name = 'theloft.at';
+
+-- Update CSS selector for a site
+UPDATE scrape_rules SET title_selector = '.new-title-class' WHERE site_name = 'grelleforelle.com';
+```
+
+### HTML Storage Details
+
+- **Location (container)**: `/app/scraper-data`
+- **Location (local dev)**: `./scraper-data` (if running without Docker)
+- **Format**: `{siteName}_{yyyyMMdd}.html`
+- **Purpose**: Offline re-parsing, debugging, reduced server load
+- **Persistence**: Stored in Docker volume `scraper_data`
+
+---
+
 ## 📝 Common Development Tasks
 
 ### View Backend Logs
@@ -181,6 +246,36 @@ docker-compose up --build
 ```powershell
 docker exec -it eventfinder_db psql -U eventfinder -d eventfinder
 ```
+
+### Trigger Web Scraping
+```powershell
+# Scrape all enabled websites using rule-based scraper
+curl -X POST http://localhost:8080/api/scraping/rules/run
+
+# Scrape a specific site
+curl -X POST http://localhost:8080/api/scraping/rules/site/theloft.at
+
+# Check scraping status for all sites
+curl http://localhost:8080/api/scraping/rules/status
+
+# Clear cached HTML for a site (force fresh fetch)
+curl -X DELETE http://localhost:8080/api/scraping/cache/theloft.at
+```
+
+### Access Cached HTML Files
+The scraper stores HTML locally to avoid repeated website hits:
+```powershell
+# View cached HTML files on your local machine
+ls ./scraper-data/
+
+# Or inside the Docker container
+docker exec eventfinder_backend ls /app/scraper-data
+
+# Copy cached HTML from container to local
+docker cp eventfinder_backend:/app/scraper-data ./local-scraper-data
+```
+
+**Note:** HTML files are named `{siteName}_{yyyyMMdd}.html` (e.g., `theloft.at_20260222.html`)
 
 ---
 

@@ -40,16 +40,18 @@ export default function ScrapingPanel() {
 
   const runScraping = async () => {
     setLoading(true);
-    setMessage("Scraping in progress... this may take a minute...");
+    setMessage("Scraping all websites in progress... this may take a minute...");
     setScrapingResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/run`, {
+      const response = await fetch(`${API_BASE}/api/scraping/rules/run`, {
         method: "POST",
       });
       const result = await response.json();
       setScrapingResult(result);
-      if (result.totalEvents > 0) {
-        setMessage(`Scraping completed! ${result.totalEvents} events saved. Switch to the Events tab to see them.`);
+      const totalNew = result.totalNew || 0;
+      const sitesProcessed = result.sitesProcessed || 0;
+      if (totalNew > 0) {
+        setMessage(`✓ Scraping completed! ${totalNew} new event(s) from ${sitesProcessed} site(s). Switch to the Events tab to see them.`);
       } else {
         setMessage("Scraping completed but no events were found.");
       }

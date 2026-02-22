@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { API_BASE } from "./src/config";
 import { fetchEvents, fetchHealth, fetchPlaces, getApiDebugState, runScraper } from "./src/api";
+import { APP_CONFIG, MOBILE_THEME } from "../shared/frontendConfig";
 
-const DEFAULT_COORDS = { lat: 48.2082, lon: 16.3738 };
+const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
 
 const formatDateTime = (dateTime) => {
   if (!dateTime) return "";
@@ -145,8 +146,8 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      <Text style={styles.header}>EventFinder Mobile</Text>
-      <Text style={styles.subheader}>Simple Expo test client</Text>
+      <Text style={styles.header}>{APP_CONFIG.appName} Mobile</Text>
+      <Text style={styles.subheader}>Simple Expo test client ({APP_CONFIG.cityLabel})</Text>
       <Text style={styles.apiHint}>{apiHint}</Text>
       <Text style={styles.apiDebug}>Current base: {apiDebug.currentBase}</Text>
       <Text style={styles.apiDebug}>Last attempt: {apiDebug.lastAttempt}</Text>
@@ -192,7 +193,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: MOBILE_THEME.colors.background,
     paddingHorizontal: 16,
   },
   header: {
@@ -201,16 +202,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   subheader: {
-    color: "#666",
+    color: MOBILE_THEME.colors.textMuted,
     marginTop: 4,
   },
   apiHint: {
-    color: "#666",
+    color: MOBILE_THEME.colors.textMuted,
     marginTop: 6,
     fontSize: 12,
   },
   apiDebug: {
-    color: "#6b7280",
+    color: MOBILE_THEME.colors.textMuted,
     marginTop: 2,
     fontSize: 11,
   },
@@ -220,28 +221,28 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: MOBILE_THEME.colors.primaryButton,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   primaryButtonLabel: {
-    color: "white",
+    color: MOBILE_THEME.colors.primaryButtonText,
     fontWeight: "600",
   },
   secondaryButton: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: MOBILE_THEME.colors.secondaryButton,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   secondaryButtonLabel: {
-    color: "#111827",
+    color: MOBILE_THEME.colors.secondaryButtonText,
     fontWeight: "600",
   },
   message: {
     marginTop: 12,
-    color: "#374151",
+    color: MOBILE_THEME.colors.textSecondary,
   },
   loader: {
     marginTop: 8,
@@ -253,28 +254,28 @@ const styles = StyleSheet.create({
   },
   tab: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: MOBILE_THEME.colors.tabBorder,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   tabActive: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
+    backgroundColor: MOBILE_THEME.colors.tabActive,
+    borderColor: MOBILE_THEME.colors.tabActive,
   },
   tabLabel: {
-    color: "#111827",
+    color: MOBILE_THEME.colors.textPrimary,
     fontWeight: "600",
   },
   tabLabelActive: {
-    color: "white",
+    color: MOBILE_THEME.colors.tabActiveText,
   },
   listContent: {
     paddingVertical: 14,
     gap: 10,
   },
   card: {
-    backgroundColor: "white",
+    backgroundColor: MOBILE_THEME.colors.card,
     borderRadius: 10,
     padding: 12,
   },
@@ -284,16 +285,16 @@ const styles = StyleSheet.create({
   },
   detail: {
     marginTop: 4,
-    color: "#4b5563",
+    color: MOBILE_THEME.colors.textSecondary,
   },
   link: {
     marginTop: 8,
-    color: "#2563eb",
+    color: MOBILE_THEME.colors.link,
     fontWeight: "600",
   },
   empty: {
     textAlign: "center",
-    color: "#6b7280",
+    color: MOBILE_THEME.colors.textMuted,
     marginTop: 20,
   },
 });

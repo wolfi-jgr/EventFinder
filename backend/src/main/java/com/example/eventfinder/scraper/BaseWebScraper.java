@@ -167,4 +167,43 @@ public abstract class BaseWebScraper {
             event.setStatus("SCHEDULED");
         }
     }
+
+    /**
+     * Set scraper-specific metadata on event
+     */
+    protected void setScraperMetadata(Event event, String scraperName, String parserVersion) {
+        event.setScrapedFrom(scraperName);
+        event.setParserVersion(parserVersion);
+        event.setCreatedAt(java.time.LocalDateTime.now());
+        event.setUpdatedAt(java.time.LocalDateTime.now());
+        setEventMetadata(event);
+    }
+
+    /**
+     * Calculate SHA256 hash for deduplication (based on title + date + organizer)
+     */
+    protected String calculateDeduplicationHash(String title, java.time.LocalDateTime startDateTime, String organizer) {
+        String combined = (title + "|" + startDateTime + "|" + (organizer != null ? organizer : "")).toLowerCase();
+        return hashSha256(combined);
+    }
+
+    /**
+     * Simple SHA256 hash implementation
+     */
+    private String hashSha256(String input) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            logger.warn("SHA-256 not available, using fallback hash");
+            return String.valueOf(input.hashCode());
+        }
+    }
 }

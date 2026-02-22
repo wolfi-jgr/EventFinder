@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import { API_CONFIG, getDefaultApiBase } from "../../shared/frontendConfig";
 
 const fromEnv = process.env.EXPO_PUBLIC_API_BASE;
 
@@ -32,20 +33,22 @@ const getApiBaseCandidates = () => {
   const candidates = [];
 
   if (Platform.OS === "android") {
-    candidates.push("http://10.0.2.2:8080");
+    candidates.push(
+      `${API_CONFIG.defaultProtocol}://${API_CONFIG.androidEmulatorHost}:${API_CONFIG.defaultPort}`
+    );
   }
 
   if (isIpv4(expoHost) && isPrivateIpv4(expoHost)) {
-    candidates.push(`http://${expoHost}:8080`);
+    candidates.push(`${API_CONFIG.defaultProtocol}://${expoHost}:${API_CONFIG.defaultPort}`);
   }
 
-  candidates.push("http://localhost:8080");
+  candidates.push(getDefaultApiBase());
   return uniq(candidates);
 };
 
 const getApiBase = () => {
   const candidates = getApiBaseCandidates();
-  return candidates[0] || "http://localhost:8080";
+  return candidates[0] || getDefaultApiBase();
 };
 
 export const API_BASE = getApiBase();

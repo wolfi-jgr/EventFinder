@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import ScrapingPanel from "./ScrapingPanel";
+import LocationSlider from "./components/LocationSlider";
+import ScrapedWebsites from "./components/ScrapedWebsites";
 import { API_BASE } from "./config";
+import { applyFrontendTheme } from "./theme";
+import { APP_CONFIG } from "@shared/frontendConfig";
 
-const DEFAULT_COORDS = { lat: 48.2082, lon: 16.3738 }; // Vienna
-
+const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
 export default function App() {
   const [coords, setCoords] = useState(DEFAULT_COORDS);
   const [places, setPlaces] = useState([]);
@@ -13,9 +16,17 @@ export default function App() {
   const [error, setError] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
   const [activeTab, setActiveTab] = useState("events"); // "places", "events", or "admin"
+  const [searchText, setSearchText] = useState("");
+  const [selectedSource, setSelectedSource] = useState("all");
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortMode, setSortMode] = useState("date-asc");
 
   // Load data on initial mount (without scraping)
   useEffect(() => {
+    applyFrontendTheme();
     loadDataFromDatabase();
   }, []);
 
@@ -56,8 +67,8 @@ export default function App() {
     setError("");
 
     try {
-      // Step 1: Run scraper to get fresh events
-      const scrapingResponse = await fetch(`${API_BASE}/api/scraping/run`, {
+      // Step 1: Run rule-based scraper for all configured websites
+      const scrapingResponse = await fetch(`${API_BASE}/api/scraping/rules/run`, {
         method: "POST",
       });
       
@@ -75,23 +86,20 @@ export default function App() {
       setLoadingMessage("");
       
       // Show detailed results
-      const newEvents = scrapingResult.newEvents || scrapingResult.totalEvents || 0;
-      const duplicates = scrapingResult.duplicates || 0;
-      const updated = scrapingResult.updated || 0;
+      const newEvents = scrapingResult.totalNew || 0;
+      const duplicates = scrapingResult.totalDuplicates || 0;
+      const sitesProcessed = scrapingResult.sitesProcessed || 0;
       
-      if (newEvents > 0 || updated > 0) {
-        let message = `✓ Scraping complete! ${newEvents} new event${newEvents !== 1 ? 's' : ''}`;
-        if (updated > 0) {
-          message += `, ${updated} updated`;
-        }
+      if (newEvents > 0) {
+        let message = `✓ Scraping complete! ${newEvents} new event${newEvents !== 1 ? 's' : ''} from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''}`;
         if (duplicates > 0) {
           message += `, ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
         }
         setError(message);
       } else if (duplicates > 0) {
-        setError(`✓ Scraping complete! ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} found (no new events)`);
+        setError(`✓ Scraping complete! ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} found from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''} (no new events)`);
       } else {
-        setError("Scraping completed, but no events found.");
+        setError(`Scraping completed from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''}, but no events found.`);
       }
     } catch (err) {
       setError(err.message || "Scraping failed");
@@ -100,27 +108,159 @@ export default function App() {
     }
   };
 
-  const formatDateTime = (dateTime) => {
-    if (!dateTime) return "";
-    const date = new Date(dateTime);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }) + 'Uhr';
+  const normalized = (value) => (value || "").toLowerCase();
+  const getSourceLabel = (event) => event.scrapedFrom || event.organizer || "Unknown Source";
+  const getLocationLabel = (event) => event.location || event.venue || "Unknown Location";
+
+  const filteredEvents = events
+    .filter((event) => {
+      const source = getSourceLabel(event);
+      const location = getLocationLabel(event);
+      const category = event.category || "Uncategorized";
+      const matchesSearch =
+        normalized(event.title).includes(normalized(searchText)) ||
+        normalized(event.description).includes(normalized(searchText)) ||
+        normalized(source).includes(normalized(searchText)) ||
+        normalized(location).includes(normalized(searchText)) ||
+        normalized(category).includes(normalized(searchText));
+      const matchesSource = selectedSource === "all" || source === selectedSource;
+      const matchesLocation = selectedLocation === "all" || location === selectedLocation;
+      const matchesCategory = selectedCategory === "all" || category === selectedCategory;
+
+      const eventDate = event.startDateTime ? new Date(event.startDateTime) : null;
+      const fromOk = !dateFrom || (eventDate && eventDate >= new Date(dateFrom));
+      const toOk = !dateTo || (eventDate && eventDate <= new Date(dateTo));
+
+      return matchesSearch && matchesSource && matchesLocation && matchesCategory && fromOk && toOk;
+    })
+    .sort((a, b) => {
+      if (sortMode === "title") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+      const aDate = a.startDateTime ? new Date(a.startDateTime).getTime() : 0;
+      const bDate = b.startDateTime ? new Date(b.startDateTime).getTime() : 0;
+      return sortMode === "date-desc" ? bDate - aDate : aDate - bDate;
+    });
+
+  const uniqueSources = Array.from(new Set(events.map(getSourceLabel))).sort((a, b) => a.localeCompare(b));
+  const uniqueLocations = Array.from(new Set(events.map(getLocationLabel))).sort((a, b) => a.localeCompare(b));
+  const uniqueCategories = Array.from(
+    new Set(events.map((event) => event.category || "Uncategorized"))
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Group events by source, then location
+  const groupEventsBySource = () => {
+    const grouped = {};
+
+    filteredEvents.forEach((event) => {
+      const sourceKey = getSourceLabel(event);
+      const locationKey = getLocationLabel(event);
+
+      if (!grouped[sourceKey]) {
+        grouped[sourceKey] = {};
+      }
+      if (!grouped[sourceKey][locationKey]) {
+        grouped[sourceKey][locationKey] = [];
+      }
+      grouped[sourceKey][locationKey].push(event);
+    });
+
+    Object.keys(grouped).forEach((source) => {
+      Object.keys(grouped[source]).forEach((location) => {
+        grouped[source][location].sort(
+          (a, b) => new Date(a.startDateTime) - new Date(b.startDateTime)
+        );
+      });
+    });
+
+    return grouped;
   };
 
   return (
     <div className="page">
       <header className="header">
-        <h1>EventFinder</h1>
-        <p>Discover events and places in Vienna</p>
+        <h1>{APP_CONFIG.appName}</h1>
+        <p>Discover events and places in {APP_CONFIG.cityLabel}</p>
       </header>
 
       <section className="controls">
+        <div className="field">
+          <label htmlFor="search">Search</label>
+          <input
+            id="search"
+            type="text"
+            placeholder="Artist, venue, genre..."
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="source">Source</label>
+          <select id="source" value={selectedSource} onChange={(event) => setSelectedSource(event.target.value)}>
+            <option value="all">All sources</option>
+            {uniqueSources.map((source) => (
+              <option key={source} value={source}>
+                {source}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="location">Location</label>
+          <select
+            id="location"
+            value={selectedLocation}
+            onChange={(event) => setSelectedLocation(event.target.value)}
+          >
+            <option value="all">All locations</option>
+            {uniqueLocations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="category">Genre</label>
+          <select
+            id="category"
+            value={selectedCategory}
+            onChange={(event) => setSelectedCategory(event.target.value)}
+          >
+            <option value="all">All genres</option>
+            {uniqueCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="dateFrom">From</label>
+          <input
+            id="dateFrom"
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="dateTo">To</label>
+          <input
+            id="dateTo"
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="sort">Sort</label>
+          <select id="sort" value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+            <option value="date-asc">Date (earliest)</option>
+            <option value="date-desc">Date (latest)</option>
+            <option value="title">Title (A-Z)</option>
+          </select>
+        </div>
         <button onClick={fetchData} disabled={loading}>
           {loading ? loadingMessage || "Loading..." : "Refresh Data"}
         </button>
@@ -152,34 +292,35 @@ export default function App() {
       <section className="results">
         {activeTab === "events" && (
           <>
-            <h2>Events</h2>
-            {events.length === 0 && !loading ? (
-              <p>No events found. Try searching.</p>
+            <h2>🎭 Events by Source</h2>
+            <p className="results-meta">
+              Showing {filteredEvents.length} of {events.length} events
+            </p>
+            {filteredEvents.length === 0 && !loading ? (
+              <p>No events found. Try refreshing.</p>
             ) : (
-              <ul className="event-list">
-                {events.map((event) => (
-                  <li key={event.id} className="event-item">
-                    <div className="event-header">
-                      <strong>{event.title}</strong>
-                      {event.category && <span className="badge">{event.category}</span>}
+              <div className="source-sections">
+                {Object.entries(groupEventsBySource())
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([source, locations]) => (
+                    <div key={source} className="source-section">
+                      <div className="source-header">
+                        <h3 className="source-name">🧭 {source}</h3>
+                      </div>
+                      <div className="source-locations">
+                        {Object.entries(locations)
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([location, sourceEvents]) => (
+                            <LocationSlider
+                              key={`${source}-${location}`}
+                              location={location}
+                              events={sourceEvents}
+                            />
+                          ))}
+                      </div>
                     </div>
-                    {event.description && (
-                      <p className="event-description">{event.description}</p>
-                    )}
-                    <div className="event-details">
-                      <div>📅 {formatDateTime(event.startDateTime)}</div>
-                      {event.location && <div>📍 {event.location}</div>}
-                      {event.organizer && <div>👤 {event.organizer}</div>}
-                      {event.price && <div>💰 {event.price}</div>}
-                    </div>
-                    {event.sourceUrl && (
-                      <a href={event.sourceUrl} target="_blank" rel="noreferrer" className="event-link">
-                        View Details →
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                  ))}
+              </div>
             )}
           </>
         )}
@@ -207,7 +348,12 @@ export default function App() {
           </>
         )}
 
-        {activeTab === "admin" && <ScrapingPanel />}
+        {activeTab === "admin" && (
+          <>
+            <ScrapingPanel />
+            <ScrapedWebsites />
+          </>
+        )}
       </section>
     </div>
   );

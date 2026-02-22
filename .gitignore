@@ -38,3 +38,7 @@ Thumbs.db
 
 # Docker volumes (optional - usually you want to keep these ignored)
 # If you want to track docker-compose.yml, keep it out of .gitignore
+
+# Scraper cached HTML
+scraper-data/*.html
+**/scraper-data/*.html

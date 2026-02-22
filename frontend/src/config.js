@@ -1,6 +1,7 @@
 // API Configuration
 // In production, VITE_API_BASE is set via environment variable during build
 // In development, it defaults to localhost
+import { getDefaultApiBase } from "@shared/frontendConfig";
 
 const getApiBase = () => {
   // Check if we're in production and if API_BASE was set during build
@@ -17,7 +18,7 @@ const getApiBase = () => {
   }
   
   // Development fallback
-  return "http://localhost:8080";
+  return getDefaultApiBase();
 };
 
 export const API_BASE = getApiBase();

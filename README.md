@@ -31,3 +31,9 @@ Frontend:
 - A separate mobile client is available in `mobile-expo/`.
 - Setup guide: `EXPO_MOBILE.md`
 - Includes: localtunnel setup, tunnel password notes, and troubleshooting for phone testing.
+
+## Shared frontend config (Vite + Expo)
+- Shared UI/app/API defaults now live in `shared/frontendConfig.js`.
+- Vite web app consumes this via alias `@shared/frontendConfig`.
+- Expo app consumes this via `../shared/frontendConfig` (enabled by `mobile-expo/metro.config.js`).
+- Update colors/app defaults once in `shared/frontendConfig.js` to keep both clients aligned.

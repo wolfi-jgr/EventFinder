@@ -1,13 +1,29 @@
 :root {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  color: #0d0d0d;
-  background: #f4f0ea;
+  font-family: var(--ef-font-family, "Space Grotesk", "Segoe UI", sans-serif);
+  color: var(--ef-text-primary, #0d0d0d);
+  background: var(--ef-bg-page, #f4f0ea);
+
+  /* Component theme variables */
+  --card-bg: var(--ef-bg-card, #ffffff);
+  --text-primary: var(--ef-text-primary, #0d0d0d);
+  --text-secondary: var(--ef-text-muted, #666);
+  --border-color: var(--ef-border-soft, #ddd);
+  --button-bg: var(--ef-bg-card, #ffffff);
+  --button-hover-bg: var(--ef-accent-soft, #ffe6c4);
+  --primary-color: var(--ef-accent, #ff8a3d);
+  --secondary-color: var(--ef-accent-hover, #ff7020);
+  --secondary-bg: var(--ef-accent-soft, #ffe6c4);
+  --scrollbar-thumb: #bdbdbd;
 }
 
 .page {
   min-height: 100vh;
   padding: 3rem 8vw;
-  background: radial-gradient(circle at top, #ffe6c4, #f4f0ea 55%);
+  background: radial-gradient(
+    circle at top,
+    var(--ef-bg-page-accent, #ffe6c4),
+    var(--ef-bg-page, #f4f0ea) 55%
+  );
 }
 
 .header {
@@ -25,6 +41,11 @@
   flex-wrap: wrap;
   align-items: flex-end;
   margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--ef-border-soft, #ddd);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
 .field {
@@ -33,14 +54,30 @@
 }
 
 input {
-  border: 1px solid #0d0d0d;
+  border: 1px solid var(--ef-text-primary, #0d0d0d);
   border-radius: 0.5rem;
   padding: 0.6rem 0.8rem;
   font-size: 1rem;
+  background: #fff;
+}
+
+select {
+  border: 1px solid var(--ef-text-primary, #0d0d0d);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  background: #fff;
+  min-width: 180px;
+}
+
+.results-meta {
+  margin: -0.75rem 0 1.5rem;
+  color: var(--ef-text-muted, #666);
+  font-size: 0.95rem;
 }
 
 button {
-  background: #ff8a3d;
+  background: var(--ef-accent, #ff8a3d);
   border: none;
   border-radius: 999px;
   padding: 0.7rem 1.5rem;
@@ -50,7 +87,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #ff7020;
+  background: var(--ef-accent-hover, #ff7020);
 }
 
 button:disabled {
@@ -62,7 +99,7 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 2px solid var(--ef-border-soft, #ddd);
 }
 
 .tabs button {
@@ -75,13 +112,13 @@ button:disabled {
 }
 
 .tabs button.active {
-  color: #ff8a3d;
-  border-bottom-color: #ff8a3d;
+  color: var(--ef-accent, #ff8a3d);
+  border-bottom-color: var(--ef-accent, #ff8a3d);
   font-weight: 700;
 }
 
 .tabs button:hover {
-  color: #ff8a3d;
+  color: var(--ef-accent, #ff8a3d);
   background: transparent;
 }
 
@@ -93,17 +130,54 @@ button:disabled {
 }
 
 .results li {
-  background: white;
+  background: var(--ef-bg-card, white);
   padding: 1rem 1.2rem;
   border-radius: 0.8rem;
   display: grid;
   gap: 0.35rem;
 }
 
-.results a {
-  color: #ff8a3d;
-  font-weight: 600;
-  text-decoration: none;
+.results {
+  background: transparent;
+  margin-top: 2rem;
+}
+
+.results h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--ef-text-primary, #0d0d0d);
+}
+
+.source-sections {
+  display: grid;
+  gap: 2rem;
+}
+
+.source-section {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--ef-border-soft, #ddd);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.source-name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ef-text-primary, #0d0d0d);
+}
+
+.source-locations {
+  display: grid;
+  gap: 1.5rem;
 }
 
 .results a:hover {
@@ -111,12 +185,12 @@ button:disabled {
 }
 
 .error {
-  color: #b00020;
+  color: var(--ef-text-error, #b00020);
   font-weight: 600;
 }
 
 .success {
-  color: #2e7d32;
+  color: var(--ef-text-success, #2e7d32);
   font-weight: 600;
 }
 
@@ -127,7 +201,7 @@ button:disabled {
 }
 
 .event-item {
-  background: white;
+  background: var(--ef-bg-card, white);
   padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -150,20 +224,20 @@ button:disabled {
 
 .event-header strong {
   font-size: 1.25rem;
-  color: #0d0d0d;
+  color: var(--ef-text-primary, #0d0d0d);
 }
 
 .badge {
-  background: #ffe6c4;
+  background: var(--ef-accent-soft, #ffe6c4);
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #ff8a3d;
+  color: var(--ef-accent, #ff8a3d);
 }
 
 .event-description {
-  color: #555;
+  color: var(--ef-text-subtle, #555);
   line-height: 1.5;
   margin: 0;
 }
@@ -172,22 +246,103 @@ button:disabled {
   display: grid;
   gap: 0.4rem;
   font-size: 0.95rem;
-  color: #666;
+  color: var(--ef-text-muted, #666);
 }
 
 .event-link {
   justify-self: start;
-  color: #ff8a3d;
+  color: var(--ef-accent, #ff8a3d);
   font-weight: 600;
   text-decoration: none;
   padding: 0.5rem 1rem;
-  background: #ffe6c4;
+  background: var(--ef-accent-soft, #ffe6c4);
   border-radius: 999px;
   transition: background 0.2s;
 }
 
 .event-link:hover {
-  background: #ffd9a6;
+  background: var(--ef-accent-soft-hover, #ffd9a6);
   text-decoration: none;
 }
 
+/* Responsive Design */
+@media (max-width: 768px) {
+  .page {
+    padding: 2rem 4vw;
+  }
+
+  .header h1 {
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controls button {
+    width: 100%;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabs button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .results ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 1rem 3vw;
+    min-height: 100vh;
+  }
+
+  .header {
+    margin-bottom: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header p {
+    font-size: 0.9rem;
+  }
+
+  .controls {
+    gap: 0.75rem;
+  }
+
+  .tabs {
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .tabs button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .event-item {
+    padding: 1rem;
+    gap: 0.6rem;
+  }
+
+  .event-header strong {
+    font-size: 1rem;
+  }
+
+  .event-details {
+    font-size: 0.85rem;
+  }
+}

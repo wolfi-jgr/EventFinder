@@ -29,6 +29,8 @@ services:
       SPRING_DATASOURCE_USERNAME: eventfinder
       SPRING_DATASOURCE_PASSWORD: eventfinder
       APP_CORS_ORIGINS: "*"
+    volumes:
+      - scraper_data_prod:/app/scraper-data
     ports:
       - "8080:8080"
     depends_on:
@@ -51,3 +53,4 @@ services:
 
 volumes:
   db_data_prod:
+  scraper_data_prod:

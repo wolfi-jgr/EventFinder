@@ -40,4 +40,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
         @Param("startDateTime") LocalDateTime startDateTime,
         @Param("location") String location
     );
+    
+    // Check if event exists by deduplication hash
+    boolean existsByDeduplicationHash(String deduplicationHash);
+    
+    // Count events from a specific scraper source
+    long countByScrapedFrom(String scrapedFrom);
 }

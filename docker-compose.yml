@@ -10,12 +10,16 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventfinder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: maven:3.9-eclipse-temurin-17
     container_name: eventfinder_backend
+    working_dir: /workspace
     ports:
       - "8080:8080"
     environment:
@@ -23,25 +27,32 @@ services:
       SPRING_DATASOURCE_USERNAME: eventfinder
       SPRING_DATASOURCE_PASSWORD: eventfinder
       APP_CORS_ORIGINS: "*"
+    volumes:
+      - ./backend:/workspace
+      - m2_cache:/root/.m2
+      - scraper_data:/app/scraper-data
+    command: mvn spring-boot:run
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     image: node:20-alpine
     container_name: eventfinder_frontend
-    working_dir: /workspace
+    working_dir: /workspace/frontend
     volumes:
-      - ./frontend:/workspace
+      - ./:/workspace
     environment:
       # Local development - uses localhost
       # The config.js will automatically handle API calls
       VITE_API_BASE: http://localhost:8080
     ports:
       - "5173:5173"
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "cd /workspace/frontend && npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
 
 volumes:
   db_data:
   m2_cache:
+  scraper_data:
