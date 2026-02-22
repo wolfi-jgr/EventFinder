@@ -12,20 +12,17 @@ services:
       - db_data:/var/lib/postgresql/data
 
   backend:
-    image: maven:3.9-eclipse-temurin-17
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: eventfinder_backend
-    working_dir: /workspace
-    volumes:
-      - ./backend:/workspace
-      - m2_cache:/root/.m2
+    ports:
+      - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/eventfinder
       SPRING_DATASOURCE_USERNAME: eventfinder
       SPRING_DATASOURCE_PASSWORD: eventfinder
       APP_CORS_ORIGINS: "*"
-    ports:
-      - "8080:8080"
-    command: mvn spring-boot:run -DskipTests
     depends_on:
       - db
 
