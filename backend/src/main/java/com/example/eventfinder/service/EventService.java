@@ -13,11 +13,9 @@ import java.util.Optional;
 @Service
 public class EventService {
     private final EventRepository eventRepository;
-    private final ScrapeService scrapeService;
 
-    public EventService(EventRepository eventRepository, ScrapeService scrapeService) {
+    public EventService(EventRepository eventRepository) {
         this.eventRepository = eventRepository;
-        this.scrapeService = scrapeService;
     }
 
     /**
@@ -83,16 +81,7 @@ public class EventService {
         return eventRepository.findEventsNearCoordinates(minLat, maxLat, minLon, maxLon);
     }
 
-    /**
-     * Fetch and save events from external sources (to be implemented with scraper)
-     */
-    public List<Event> fetchAndSaveEvents(double latitude, double longitude) {
-        // Fetch events from scraper
-        List<Event> fetchedEvents = scrapeService.fetchEventsStub(latitude, longitude);
-        
-        // Save and return the fetched events
-        return saveAllEvents(fetchedEvents);
-    }
+
 
     /**
      * Create or update an event

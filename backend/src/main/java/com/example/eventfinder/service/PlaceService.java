@@ -4,31 +4,51 @@ import com.example.eventfinder.model.Place;
 import com.example.eventfinder.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PlaceService {
     private final PlaceRepository placeRepository;
-    private final ScrapeService scrapeService;
 
-    public PlaceService(PlaceRepository placeRepository, ScrapeService scrapeService) {
+    public PlaceService(PlaceRepository placeRepository) {
         this.placeRepository = placeRepository;
-        this.scrapeService = scrapeService;
     }
 
-    public List<Place> getPlaces(double latitude, double longitude) {
-        List<Place> fetched = scrapeService.fetchPlacesStub(latitude, longitude);
-
-        // Basic cache write for now; later, replace with real merge/dedup logic.
-        for (Place place : fetched) {
-            place.setLastUpdated(Instant.now());
-        }
-
-        return placeRepository.saveAll(fetched);
-    }
-
+    /**
+     * Get all cached places
+     */
     public List<Place> getCachedPlaces() {
         return placeRepository.findAll();
     }
+
+    /**
+     * Get places near given coordinates (within approximate 50km radius)
+     */
+    public List<Place> getPlaces(double lat, double lon) {
+        // Default radius of 50km
+        double radiusKm = 50.0;
+        return getPlacesNearCoordinates(lat, lon, radiusKm);
+    }
+
+    /**
+     * Get places near coordinates within a specified radius
+     */
+    public List<Place> getPlacesNearCoordinates(double latitude, double longitude, double radiusKm) {
+        double latOffset = radiusKm / 111.0;
+        double lonOffset = radiusKm / (111.0 * Math.cos(Math.toRadians(latitude)));
+
+        double minLat = latitude - latOffset;
+        double maxLat = latitude + latOffset;
+        double minLon = longitude - lonOffset;
+        double maxLon = longitude + lonOffset;
+
+        List<Place> places = placeRepository.findAll();
+        return places.stream()
+                .filter(p -> p.getLatitude() != null && p.getLongitude() != null)
+                .filter(p -> p.getLatitude() >= minLat && p.getLatitude() <= maxLat &&
+                           p.getLongitude() >= minLon && p.getLongitude() <= maxLon)
+                .collect(Collectors.toList());
+    }
 }
+

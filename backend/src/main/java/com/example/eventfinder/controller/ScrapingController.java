@@ -1,64 +1,26 @@
 package com.example.eventfinder.controller;
 
-import com.example.eventfinder.scraper.ScraperManager;
 import com.example.eventfinder.service.ScrapeOrchestrationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Controller for managing web scraping operations
+ * Controller for managing web scraping operations using rule-based system
  */
 @RestController
 @RequestMapping("/api/scraping")
 public class ScrapingController {
     
-    private final ScraperManager scraperManager;
     private final ScrapeOrchestrationService orchestrationService;
     
-    public ScrapingController(ScraperManager scraperManager, 
-                             ScrapeOrchestrationService orchestrationService) {
-        this.scraperManager = scraperManager;
+    public ScrapingController(ScrapeOrchestrationService orchestrationService) {
         this.orchestrationService = orchestrationService;
     }
     
-    /**
-     * POST /api/scraping/run - Run scraping for all enabled sources (legacy)
-     */
-    @PostMapping("/run")
-    public ResponseEntity<Map<String, Object>> runScraping() {
-        Map<String, Object> results = scraperManager.scrapeAllSources();
-        return ResponseEntity.ok(results);
-    }
-    
-    /**
-     * POST /api/scraping/source/{sourceId} - Run scraping for a specific source (legacy)
-     */
-    @PostMapping("/source/{sourceId}")
-    public ResponseEntity<Object> scrapeSource(@PathVariable Long sourceId) {
-        try {
-            ScraperManager.ScrapingResult result = scraperManager.scrapeSourceById(sourceId);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-    
-    /**
-     * GET /api/scraping/scrapers - Get available scraper types (legacy)
-     */
-    @GetMapping("/scrapers")
-    public Set<String> getAvailableScrapers() {
-        return scraperManager.getAvailableScraperTypes();
-    }
-    
-    // ========== NEW RULE-BASED SCRAPING ENDPOINTS ==========
+    // ========== RULE-BASED SCRAPING ENDPOINTS ==========
     
     /**
      * POST /api/scraping/rules/run - Run scraping for all enabled sites using rules

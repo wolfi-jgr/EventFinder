@@ -1,38 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./ScrapingPanel.css";
 import { API_BASE } from "./config";
 
 export default function ScrapingPanel() {
-  const [sources, setSources] = useState([]);
+  const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [scrapingResult, setScrapingResult] = useState(null);
 
-  const initializeSources = async () => {
-    setLoading(true);
-    setMessage("");
-    try {
-      const response = await fetch(`${API_BASE}/api/sources/initialize`, {
-        method: "POST",
-      });
-      const text = await response.text();
-      setMessage(text);
-      await loadSources();
-    } catch (err) {
-      setMessage("Error: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadSites();
+  }, []);
 
-  const loadSources = async () => {
+  const loadSites = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/sources`);
-      const data = await response.json();
-      setSources(data);
+      const response = await fetch(`${API_BASE}/api/scraping/rules/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setSites(data);
+      }
     } catch (err) {
-      setMessage("Error loading sources: " + err.message);
+      setMessage("Error loading sites: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -48,12 +37,50 @@ export default function ScrapingPanel() {
       });
       const result = await response.json();
       setScrapingResult(result);
-      const totalNew = result.totalNew || 0;
-      const sitesProcessed = result.sitesProcessed || 0;
+      
+      let totalNew = 0;
+      let sitesProcessed = 0;
+      
+      if (Array.isArray(result)) {
+        totalNew = result.reduce((sum, r) => sum + (r.newEvents || 0), 0);
+        sitesProcessed = result.filter(r => r.newEvents > 0).length;
+      } else {
+        totalNew = result.totalNew || result.newEvents || 0;
+        sitesProcessed = result.sitesProcessed || 1;
+      }
+      
       if (totalNew > 0) {
         setMessage(`✓ Scraping completed! ${totalNew} new event(s) from ${sitesProcessed} site(s). Switch to the Events tab to see them.`);
       } else {
-        setMessage("Scraping completed but no events were found.");
+        setMessage("Scraping completed but no new events were found.");
+      }
+      
+      // Refresh sites list
+      await loadSites();
+    } catch (err) {
+      setMessage("Error: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const scrapeSite = async (siteName) => {
+    setLoading(true);
+    setMessage(`Scraping ${siteName}...`);
+    setScrapingResult(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/scraping/rules/site/${encodeURIComponent(siteName)}`, {
+        method: "POST",
+      });
+      const result = await response.json();
+      
+      if (result.error) {
+        setMessage(`Error scraping ${siteName}: ${result.error}`);
+      } else {
+        setScrapingResult(result);
+        const newEventsCount = result.newEvents || 0;
+        setMessage(`✓ ${siteName}: ${newEventsCount} new event(s)`);
+        await loadSites();
       }
     } catch (err) {
       setMessage("Error: " + err.message);
@@ -62,31 +89,15 @@ export default function ScrapingPanel() {
     }
   };
 
-  const toggleSource = async (id) => {
+  const clearCache = async (siteName) => {
     try {
-      await fetch(`${API_BASE}/api/sources/${id}/toggle`, {
-        method: "POST",
+      await fetch(`${API_BASE}/api/scraping/cache/${encodeURIComponent(siteName)}`, {
+        method: "DELETE",
       });
-      await loadSources();
+      setMessage(`Cache cleared for ${siteName}`);
+      await loadSites();
     } catch (err) {
-      setMessage("Error toggling source: " + err.message);
-    }
-  };
-
-  const fixScrapers = async () => {
-    setLoading(true);
-    setMessage("Fixing scraper types...");
-    try {
-      const response = await fetch(`${API_BASE}/api/sources/fix-scrapers`, {
-        method: "POST",
-      });
-      const text = await response.text();
-      setMessage(text);
-      await loadSources();
-    } catch (err) {
-      setMessage("Error: " + err.message);
-    } finally {
-      setLoading(false);
+      setMessage("Error clearing cache: " + err.message);
     }
   };
 
@@ -95,17 +106,11 @@ export default function ScrapingPanel() {
       <h2>🔧 Scraping Admin</h2>
 
       <div className="actions">
-        <button onClick={initializeSources} disabled={loading}>
-          Initialize Default Sources
+        <button onClick={runScraping} disabled={loading || sites.length === 0}>
+          {loading ? "Scraping..." : "Run All Scrapers"}
         </button>
-        <button onClick={loadSources} disabled={loading}>
-          Load Sources
-        </button>
-        <button onClick={fixScrapers} disabled={loading}>
-          Fix Scraper Types
-        </button>
-        <button onClick={runScraping} disabled={loading || sources.length === 0}>
-          Run Scraping
+        <button onClick={loadSites} disabled={loading}>
+          Refresh Status
         </button>
       </div>
 
@@ -115,50 +120,50 @@ export default function ScrapingPanel() {
         <div className="scraping-result">
           <h3>Scraping Results</h3>
           <div className="result-stats">
-            <div>✅ Success: {scrapingResult.successCount}</div>
-            <div>❌ Failed: {scrapingResult.failureCount}</div>
-            <div>📦 Total Events: {scrapingResult.totalEvents}</div>
-          </div>
-          {scrapingResult.errors && scrapingResult.errors.length > 0 && (
-            <div className="errors">
-              <h4>Errors:</h4>
-              {scrapingResult.errors.map((error, index) => (
-                <div key={index} className="error-item">
-                  {error}
+            {Array.isArray(scrapingResult) ? (
+              scrapingResult.map((result) => (
+                <div key={result.siteName}>
+                  <strong>{result.siteName}</strong>: {result.newEvents || 0} new events
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              <>
+                <div>📦 New Events: {scrapingResult.newEvents || 0}</div>
+                {scrapingResult.eventCount !== undefined && (
+                  <div>📊 Total: {scrapingResult.eventCount}</div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      {sources.length > 0 && (
+      {sites.length > 0 && (
         <div className="sources-list">
-          <h3>Sources ({sources.length})</h3>
-          {sources.map((source) => (
-            <div key={source.id} className="source-item">
+          <h3>Configured Scraping Sites ({sites.length})</h3>
+          {sites.map((site) => (
+            <div key={site.siteName} className="source-item">
               <div className="source-info">
-                <strong>{source.name}</strong>
-                <span className={`status ${source.isEnabled ? "enabled" : "disabled"}`}>
-                  {source.isEnabled ? "✓ Enabled" : "✗ Disabled"}
+                <strong>{site.siteName}</strong>
+                <span className={`status ${site.enabled ? "enabled" : "disabled"}`}>
+                  {site.enabled ? "✓ Enabled" : "✗ Disabled"}
                 </span>
-                {source.isSystem && <span className="badge">System</span>}
               </div>
               <div className="source-details">
-                <div>URL: {source.url}</div>
-                <div>Type: {source.scraperType}</div>
-                {source.category && <div>Category: {source.category}</div>}
-                {source.lastScrapedAt && (
-                  <div>Last scraped: {new Date(source.lastScrapedAt).toLocaleString()}</div>
-                )}
-                {source.lastErrorMessage && (
-                  <div className="error-message">Error: {source.lastErrorMessage}</div>
-                )}
+                <div>Base URL: {site.baseUrl}</div>
+                <div>Mode: {site.extractionMode}</div>
+                <div>Events: {site.eventCount || 0}</div>
+                {site.hasCachedHtml && <div className="cached">📦 Has cached HTML</div>}
               </div>
               <div className="source-actions">
-                <button onClick={() => toggleSource(source.id)}>
-                  {source.isEnabled ? "Disable" : "Enable"}
+                <button onClick={() => scrapeSite(site.siteName)} disabled={loading}>
+                  Scrape Now
                 </button>
+                {site.hasCachedHtml && (
+                  <button onClick={() => clearCache(site.siteName)} disabled={loading}>
+                    Clear Cache
+                  </button>
+                )}
               </div>
             </div>
           ))}

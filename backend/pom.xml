@@ -54,6 +54,13 @@
       <version>1.17.2</version>
     </dependency>
 
+    <!-- Playwright for JavaScript-heavy sites -->
+    <dependency>
+      <groupId>com.microsoft.playwright</groupId>
+      <artifactId>playwright</artifactId>
+      <version>1.45.0</version>
+    </dependency>
+
     <!-- Flyway for database migrations -->
     <dependency>
       <groupId>org.flywaydb</groupId>

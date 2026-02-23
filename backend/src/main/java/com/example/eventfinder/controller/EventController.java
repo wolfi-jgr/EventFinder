@@ -134,12 +134,4 @@ public class EventController {
                 ));
     }
 
-    /**
-     * POST /api/events/fetch - Fetch and save events from external sources
-     * Example: /api/events/fetch?lat=52.5200&lon=13.4050
-     */
-    @PostMapping("/fetch")
-    public List<Event> fetchEvents(@RequestParam double lat, @RequestParam double lon) {
-        return eventService.fetchAndSaveEvents(lat, lon);
-    }
 }

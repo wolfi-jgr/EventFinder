@@ -5,12 +5,21 @@ import com.example.eventfinder.model.ScrapeRule;
 import com.example.eventfinder.scraper.BaseWebScraper;
 import com.example.eventfinder.scraper.ScrapedEvent;
 import com.example.eventfinder.scraper.ScraperConfig;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microsoft.playwright.*;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -46,6 +55,31 @@ public class GenericScraper extends BaseWebScraper {
         Map.entry("dezember", 12)
     );
     
+    // Location blacklist - common non-venue words
+    private static final Set<String> LOCATION_BLACKLIST = Set.of(
+        "location", "ort", "venue", "veranstaltungsort", "address", 
+        "wien", "vienna", "theater", "kino", "museum", "kostenlos",
+        "programm", "eventprogramm", "informationen", "details", "tickets"
+    );
+    
+    // German day names for parsing
+    private static final Map<String, Integer> GERMAN_DAYS = Map.ofEntries(
+        Map.entry("montag", 1),
+        Map.entry("dienstag", 2),
+        Map.entry("mittwoch", 3),
+        Map.entry("donnerstag", 4),
+        Map.entry("freitag", 5),
+        Map.entry("samstag", 6),
+        Map.entry("sonntag", 7),
+        Map.entry("mo", 1),
+        Map.entry("di", 2),
+        Map.entry("mi", 3),
+        Map.entry("do", 4),
+        Map.entry("fr", 5),
+        Map.entry("sa", 6),
+        Map.entry("so", 7)
+    );
+    
     public GenericScraper(ScraperConfig config) {
         super(config);
     }
@@ -68,6 +102,23 @@ public class GenericScraper extends BaseWebScraper {
             throw new IllegalStateException("Scrape rule for " + rule.getSiteName() + " is disabled");
         }
         
+        // Try WordPress API first - always attempt for any site
+        if (isWordPressSite(rule.getBaseUrl())) {
+            logger.info("[{}] WordPress site detected for {}. Attempting REST API scraping...", 
+                getScraperName(), rule.getSiteName());
+            try {
+                List<Event> events = scrapeFromWordPressAPI(rule);
+                if (!events.isEmpty()) {
+                    logger.info("[{}] Successfully scraped {} events from WordPress API", 
+                        getScraperName(), events.size());
+                    return events;
+                }
+            } catch (Exception e) {
+                logger.warn("[{}] WordPress API scraping failed, falling back to HTML fetch: {}", 
+                    getScraperName(), e.getMessage());
+            }
+        }
+        
         return scrapeEvents(rule.getBaseUrl(), rule);
     }
     
@@ -79,7 +130,24 @@ public class GenericScraper extends BaseWebScraper {
             throw new IllegalStateException("Scrape rule for " + rule.getSiteName() + " is disabled");
         }
         
-        // Parse cached HTML
+        // Try WordPress API first - prefer fresh API data even if cached HTML exists
+        if (isWordPressSite(rule.getBaseUrl())) {
+            logger.info("[{}] WordPress site detected for {}. Attempting REST API (ignoring cache)...", 
+                getScraperName(), rule.getSiteName());
+            try {
+                List<Event> events = scrapeFromWordPressAPI(rule);
+                if (!events.isEmpty()) {
+                    logger.info("[{}] Successfully scraped {} events from WordPress API (bypassed cache)", 
+                        getScraperName(), events.size());
+                    return events;
+                }
+            } catch (Exception e) {
+                logger.warn("[{}] WordPress API scraping failed, falling back to cached HTML: {}", 
+                    getScraperName(), e.getMessage());
+            }
+        }
+        
+        // Parse cached HTML as fallback
         Document doc = org.jsoup.Jsoup.parse(cachedHtml, rule.getBaseUrl());
         return scrapeEventsFromDocument(doc, rule);
     }
@@ -94,13 +162,31 @@ public class GenericScraper extends BaseWebScraper {
      * Internal method that scrapes with a given rule
      */
     private List<Event> scrapeEvents(String url, ScrapeRule rule) throws Exception {
-        // Fetch the document
-        Document doc = fetchDocument(url);
-        return scrapeEventsFromDocument(doc, rule);
+        // Document doc = fetchDocument(url);
+        // Check if this site needs JavaScript rendering (is JavaScript-heavy)
+        if (isJavaScriptHeavySite(rule.getSiteName())) {
+            logger.info("[{}] Detected JavaScript-heavy site: {}. Using Playwright for rendering...", 
+                getScraperName(), rule.getSiteName());
+            try {
+                Document doc = fetchDocumentWithPlaywright(url);
+                return scrapeEventsFromDocument(doc, rule);
+            } catch (Exception e) {
+                logger.warn("[{}] Playwright rendering failed for {}, falling back to standard fetch: {}", 
+                    getScraperName(), rule.getSiteName(), e.getMessage());
+                // Fall back to standard fetch
+                Document doc = fetchDocument(url);
+                return scrapeEventsFromDocument(doc, rule);
+            }
+        } else {
+            // Regular fetch for non-JavaScript-heavy sites
+            Document doc = fetchDocument(url);
+            return scrapeEventsFromDocument(doc, rule);
+        }
     }
     
     /**
      * Extract events from a document using rule
+     * Falls back to CSS selectors if WordPress API wasn't used (handled at scrapeWithRule level)
      */
     private List<Event> scrapeEventsFromDocument(Document doc, ScrapeRule rule) throws Exception {
         List<Event> events = new ArrayList<>();
@@ -170,7 +256,11 @@ public class GenericScraper extends BaseWebScraper {
                 // Extract venue
                 if (rule.getVenueSelector() != null) {
                     Element venueEl = item.selectFirst(rule.getVenueSelector());
-                    scraped.setVenue(safeText(venueEl));
+                    String venue = safeText(venueEl);
+                    // Validate and clean venue name
+                    if (venue != null && isValidVenueName(venue)) {
+                        scraped.setVenue(venue.trim());
+                    }
                 }
                 
                 // Extract link
@@ -249,6 +339,230 @@ public class GenericScraper extends BaseWebScraper {
     }
 
     /**
+     * Check if a site requires JavaScript rendering (is JavaScript-heavy)
+     */
+    private boolean isJavaScriptHeavySite(String siteName) {
+        // List of sites that are known to render events using JavaScript
+        Set<String> jsHeavySites = Set.of(
+            "savedate.io/@prst",
+            "savedate.io",
+            "eventsfinder",
+            "react-events"
+        );
+        
+        boolean isJsHeavy = jsHeavySites.stream()
+            .anyMatch(site -> siteName.toLowerCase().contains(site.toLowerCase()));
+        logger.info("[{}] JavaScript-heavy check for '{}': {}", getScraperName(), siteName, isJsHeavy);
+        return isJsHeavy;
+    }
+
+    /**
+     * Fetch document using Playwright for JavaScript-heavy sites
+     * Waits for content to load before returning HTML
+     */
+    private Document fetchDocumentWithPlaywright(String url) throws Exception {
+        logger.info("[{}] Using Playwright to fetch: {}", getScraperName(), url);
+        
+        try (Playwright playwright = Playwright.create()) {
+            // Use chromium browser
+            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
+                .setHeadless(true);
+            
+            try (Browser browser = playwright.chromium().launch(launchOptions)) {
+                BrowserContext context = browser.newContext();
+                Page page = context.newPage();
+                
+                try {
+                    // Navigate to the page - wait for initial response
+                    page.navigate(url);
+                    
+                    // Wait for content to load - give JavaScript time to render events
+                    page.waitForTimeout(3000);
+                    
+                    // Get the rendered HTML
+                    String content = page.content();
+                    
+                    logger.info("[{}] Successfully fetched and rendered: {}", getScraperName(), url);
+                    
+                    // Parse as JSoup Document
+                    return Jsoup.parse(content, url);
+                    
+                } finally {
+                    page.close();
+                    context.close();
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if a site is a WordPress site by testing for REST API availability
+     */
+    private boolean isWordPressSite(String baseUrl) {
+        try {
+            String wpJsonUrl = baseUrl.replaceAll("/$", "") + "/wp-json/wp/v2/posts?per_page=1";
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(wpJsonUrl))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .header("User-Agent", "EventFinder-Scraper")
+                .GET()
+                .build();
+            
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            // If we get a 200 and valid JSON with posts array, it's WordPress
+            if (response.statusCode() == 200) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode root = mapper.readTree(response.body());
+                // WordPress REST API returns an array of posts at the root level
+                return root.isArray() || (root.isObject() && root.has("0"));
+            }
+        } catch (Exception e) {
+            logger.debug("[{}] WordPress detection failed for {}: {}", 
+                getScraperName(), baseUrl, e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Scrape events from WordPress REST API
+     */
+    private List<Event> scrapeFromWordPressAPI(ScrapeRule rule) throws Exception {
+        List<Event> events = new ArrayList<>();
+        
+        String baseUrl = rule.getBaseUrl().replaceAll("/$", "");
+        String wpJsonUrl = baseUrl + "/wp-json/wp/v2/posts?per_page=50&orderby=date&order=desc";
+        
+        logger.info("[{}] Fetching from WordPress API: {}", getScraperName(), wpJsonUrl);
+        
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(wpJsonUrl))
+            .timeout(java.time.Duration.ofSeconds(15))
+            .header("User-Agent", "EventFinder-Scraper")
+            .header("Accept", "application/json")
+            .GET()
+            .build();
+        
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        if (response.statusCode() != 200) {
+            throw new IOException("WordPress API returned status " + response.statusCode());
+        }
+        
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode postsNode = mapper.readTree(response.body());
+        
+        // WordPress returns an array of posts
+        if (postsNode.isArray()) {
+            for (JsonNode post : postsNode) {
+                try {
+                    Event event = parseWordPressPost(post, rule);
+                    if (event != null && event.getTitle() != null && event.getStartDateTime() != null) {
+                        events.add(event);
+                    }
+                } catch (Exception e) {
+                    logger.warn("[{}] Failed to parse WordPress post: {}", getScraperName(), e.getMessage());
+                }
+            }
+        }
+        
+        return events;
+    }
+
+    /**
+     * Parse a WordPress post into an Event
+     */
+    private Event parseWordPressPost(JsonNode post, ScrapeRule rule) throws Exception {
+        ScrapedEvent scraped = new ScrapedEvent();
+        
+        // Extract title from rendered HTML
+        if (post.has("title") && post.get("title").has("rendered")) {
+            String title = post.get("title").get("rendered").asText();
+            // Remove HTML tags
+            title = title.replaceAll("<[^>]*>", "");
+            // Decode HTML entities
+            title = org.jsoup.parser.Parser.unescapeEntities(title, false);
+            scraped.setTitle(title);
+        }
+        
+        // Extract date
+        if (post.has("date")) {
+            try {
+                String dateStr = post.get("date").asText();
+                // WordPress returns ISO 8601 format: 2026-02-18T14:11:29
+                LocalDateTime dateTime = LocalDateTime.parse(dateStr, 
+                    DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                scraped.setStartDateTime(dateTime);
+            } catch (Exception e) {
+                logger.debug("[{}] Failed to parse WordPress date: {}", getScraperName(), e.getMessage());
+            }
+        }
+        
+        // Try to extract event details from content
+        if (post.has("content") && post.get("content").has("rendered")) {
+            String content = post.get("content").get("rendered").asText();
+            Document contentDoc = Jsoup.parse(content);
+            
+            // Look for venue information in content
+            String text = contentDoc.text();
+            extractVenueFromText(scraped, text);
+            
+            // Look for price information in content
+            extractPriceFromText(scraped, text);
+        }
+        
+        // Set link as source URL
+        if (post.has("link")) {
+            scraped.setSourceUrl(post.get("link").asText());
+        }
+        
+        // Set defaults from rule
+        scraped.setCategory(rule.getCategory());
+        scraped.setOrganizer(rule.getOrganizer());
+        
+        return convertToEvent(scraped, rule);
+    }
+
+    /**
+     * Try to extract venue from plain text
+     */
+    private void extractVenueFromText(ScrapedEvent scraped, String text) {
+        // Look for common venue indicators
+        Pattern venuePattern = Pattern.compile(
+            "(?:venue|location|ort|wo|platz|saal|theater|kino)\\s*[:\\-]\\s*([^.\\n,;]+)", 
+            Pattern.CASE_INSENSITIVE
+        );
+        Matcher matcher = venuePattern.matcher(text);
+        if (matcher.find()) {
+            String venue = matcher.group(1).trim();
+            if (isValidVenueName(venue)) {
+                scraped.setVenue(venue);
+            }
+        }
+    }
+
+    /**
+     * Try to extract price from plain text
+     */
+    private void extractPriceFromText(ScrapedEvent scraped, String text) {
+        // Look for common price indicators in euros
+        Pattern pricePattern = Pattern.compile(
+            "(\\d+[.,]\\d{2})?\\s*(?:€|eur|euro)",
+            Pattern.CASE_INSENSITIVE
+        );
+        Matcher matcher = pricePattern.matcher(text);
+        if (matcher.find()) {
+            String priceStr = matcher.group(1);
+            if (priceStr != null) {
+                parsePricing(scraped, priceStr);
+            }
+        }
+    }
+
+    /**
      * Parse date/time string using format and locale from rule
      */
     private LocalDateTime parseDateTime(String dateStr, String format, String locale) {
@@ -265,6 +579,12 @@ public class GenericScraper extends BaseWebScraper {
         try {
             Matcher timeMatcher = Pattern.compile("(\\d{1,2}:\\d{2})").matcher(cleaned);
             String timePart = timeMatcher.find() ? timeMatcher.group(1) : null;
+            
+            // Try parsing German day names (e.g., "Montag, 19:30 Uhr")
+            LocalDateTime dayNameDate = parseGermanDayName(cleaned, timePart);
+            if (dayNameDate != null) {
+                return dayNameDate;
+            }
 
             LocalDateTime looseSlashDate = parseLooseSlashDate(cleaned, timePart);
             if (looseSlashDate != null) {
@@ -539,5 +859,80 @@ public class GenericScraper extends BaseWebScraper {
         );
         
         return event;
+    }
+    
+    /**
+     * Parse German day name and return LocalDateTime for next occurrence
+     * e.g., "Montag, 19:30 Uhr" -> next Monday at 19:30
+     */
+    private LocalDateTime parseGermanDayName(String text, String timePart) {
+        if (text == null) return null;
+        
+        String lower = text.toLowerCase()
+            .replace(",", "")
+            .replace(".", "")
+            .replace(" uhr", "")
+            .trim();
+        
+        // Find day name in text
+        for (Map.Entry<String, Integer> entry : GERMAN_DAYS.entrySet()) {
+            if (lower.contains(entry.getKey())) {
+                int targetDayOfWeek = entry.getValue();
+                LocalDate today = LocalDate.now();
+                LocalDate targetDate = today;
+                
+                // Find next occurrence of this day (including today if it matches)
+                while (targetDate.getDayOfWeek().getValue() != targetDayOfWeek) {
+                    targetDate = targetDate.plusDays(1);
+                    // Safety limit - don't search beyond 7 days
+                    if (targetDate.isAfter(today.plusDays(7))) {
+                        return null;
+                    }
+                }
+                
+                // Parse time or default to 19:00
+                LocalTime time = LocalTime.of(19, 0);
+                if (timePart != null) {
+                    try {
+                        time = LocalTime.parse(timePart);
+                    } catch (Exception e) {
+                        // Keep default time
+                    }
+                }
+                
+                return LocalDateTime.of(targetDate, time);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Validate if a string is a valid venue name
+     */
+    private boolean isValidVenueName(String venue) {
+        if (venue == null || venue.trim().isEmpty()) {
+            return false;
+        }
+        
+        String trimmed = venue.trim();
+        
+        // Length check: venue names are typically 3-100 chars
+        if (trimmed.length() < 3 || trimmed.length() > 100) {
+            return false;
+        }
+        
+        // Check against blacklist
+        String lower = trimmed.toLowerCase();
+        if (LOCATION_BLACKLIST.contains(lower)) {
+            return false;
+        }
+        
+        // Must have at least one letter
+        if (!trimmed.matches(".*[A-Za-zÄÖÜäöüß].*")) {
+            return false;
+        }
+        
+        return true;
     }
 }

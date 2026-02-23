@@ -25,9 +25,6 @@ public class Place {
 
     private Double longitude;
 
-    @Column(name = "source_url")
-    private String sourceUrl;
-
     @Column(name = "last_updated")
     private Instant lastUpdated;
 
@@ -69,14 +66,6 @@ public class Place {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
-    }
-
-    public String getSourceUrl() {
-        return sourceUrl;
-    }
-
-    public void setSourceUrl(String sourceUrl) {
-        this.sourceUrl = sourceUrl;
     }
 
     public Instant getLastUpdated() {

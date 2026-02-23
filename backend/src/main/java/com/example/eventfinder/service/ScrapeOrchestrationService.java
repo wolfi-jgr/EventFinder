@@ -100,8 +100,11 @@ public class ScrapeOrchestrationService {
         try {
             List<Event> events;
             
-            // Check if we have cached HTML for today
-            if (htmlStorage.exists(rule.getSiteName())) {
+            // Check if this is a JavaScript-heavy site that needs fresh rendering
+            boolean isJsHeavySite = rule.getSiteName().toLowerCase().contains("savedate.io");
+            
+            // Check if we have cached HTML for today (but skip for JS-heavy sites)
+            if (!isJsHeavySite && htmlStorage.exists(rule.getSiteName())) {
                 logger.info("Using cached HTML for {}", rule.getSiteName());
                 String cachedHtml = htmlStorage.loadHtml(rule.getSiteName());
                 
@@ -109,7 +112,8 @@ public class ScrapeOrchestrationService {
                 events = genericScraper.scrapeWithRule(rule, cachedHtml);
                 
             } else {
-                logger.info("Fetching fresh HTML for {}", rule.getSiteName());
+                logger.info("Fetching fresh HTML for {} (JavaScript-intensive: {})", 
+                    rule.getSiteName(), isJsHeavySite);
                 
                 // Fetch and scrape
                 events = genericScraper.scrapeWithRule(rule);
