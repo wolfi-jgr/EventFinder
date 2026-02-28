@@ -69,7 +69,8 @@ export default function ScrapingPanel() {
     setMessage(`Scraping ${siteName}...`);
     setScrapingResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/site/${encodeURIComponent(siteName)}`, {
+      console.log(`Initiating scraping for site: ${siteName}`);
+      const response = await fetch(`${API_BASE}/api/scraping/rules/site?siteName=${encodeURIComponent(siteName)}`, {
         method: "POST",
       });
       const result = await response.json();
@@ -101,6 +102,63 @@ export default function ScrapingPanel() {
     }
   };
 
+  const clearEvents = async (siteName) => {
+    const confirmed = window.confirm(
+      `Delete all scraped events for ${siteName}? This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(`Deleting events for ${siteName}...`);
+    setScrapingResult(null);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/scraping/events/site?siteName=${encodeURIComponent(siteName)}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        setMessage(`Error deleting events for ${siteName}: ${result.error || "Unknown error"}`);
+      } else {
+        setMessage(`✓ ${siteName}: deleted ${result.deleted || 0} event(s)`);
+        await loadSites();
+      }
+    } catch (err) {
+      setMessage("Error deleting events: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncRules = async () => {
+    setLoading(true);
+    setMessage("Syncing scrape rules from config...");
+    setScrapingResult(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/scraping/rules/sync`, {
+        method: "POST",
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        setMessage(`Error syncing rules: ${result.error || "Unknown error"}`);
+        return;
+      }
+
+      setMessage(
+        `✓ Rules synced: ${result.inserted || 0} inserted, ${result.updated || 0} updated, ${result.deleted || 0} deleted.`
+      );
+      await loadSites();
+    } catch (err) {
+      setMessage("Error syncing rules: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="scraping-panel">
       <h2>🔧 Scraping Admin</h2>
@@ -108,6 +166,9 @@ export default function ScrapingPanel() {
       <div className="actions">
         <button onClick={runScraping} disabled={loading || sites.length === 0}>
           {loading ? "Scraping..." : "Run All Scrapers"}
+        </button>
+        <button onClick={syncRules} disabled={loading}>
+          Sync Rules
         </button>
         <button onClick={loadSites} disabled={loading}>
           Refresh Status
@@ -158,6 +219,9 @@ export default function ScrapingPanel() {
               <div className="source-actions">
                 <button onClick={() => scrapeSite(site.siteName)} disabled={loading}>
                   Scrape Now
+                </button>
+                <button onClick={() => clearEvents(site.siteName)} disabled={loading}>
+                  Clear Events
                 </button>
                 {site.hasCachedHtml && (
                   <button onClick={() => clearCache(site.siteName)} disabled={loading}>

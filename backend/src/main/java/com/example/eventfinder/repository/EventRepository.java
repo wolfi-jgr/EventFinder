@@ -46,4 +46,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     
     // Count events from a specific scraper source
     long countByScrapedFrom(String scrapedFrom);
+
+    // Delete all events from a specific scraper source
+    long deleteByScrapedFrom(String scrapedFrom);
 }

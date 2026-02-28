@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:classpath:scrape-rules.yml
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/eventfinder}
     username: ${SPRING_DATASOURCE_USERNAME:eventfinder}

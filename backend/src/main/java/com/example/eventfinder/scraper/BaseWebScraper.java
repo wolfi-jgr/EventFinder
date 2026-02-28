@@ -54,7 +54,7 @@ public abstract class BaseWebScraper {
     /**
      * Fetch a webpage with rate limiting and retry logic
      */
-    protected Document fetchDocument(String url) throws IOException, InterruptedException {
+    public Document fetchDocument(String url) throws IOException, InterruptedException {
         if (!config.isEnabled()) {
             throw new IllegalStateException("Scraping is disabled");
         }

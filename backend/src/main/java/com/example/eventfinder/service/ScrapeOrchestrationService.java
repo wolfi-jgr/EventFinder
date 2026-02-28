@@ -6,8 +6,9 @@ import com.example.eventfinder.model.Event;
 import com.example.eventfinder.model.ScrapeRule;
 import com.example.eventfinder.repository.EventRepository;
 import com.example.eventfinder.repository.ScrapeRuleRepository;
+import com.example.eventfinder.scraper.EventScraper;
 import com.example.eventfinder.scraper.HtmlStorage;
-import com.example.eventfinder.scraper.impl.GenericScraper;
+import com.example.eventfinder.scraper.ScraperFactory;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
@@ -15,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 /**
  * Orchestrates the scraping process across multiple websites.
  * Integrates HTML storage, rule-based scraping, and event deduplication.
+ * Uses ScraperFactory to select the appropriate scraper based on extraction mode.
  */
 @Service
 public class ScrapeOrchestrationService {
@@ -29,17 +33,17 @@ public class ScrapeOrchestrationService {
 
     private final ScrapeRuleRepository ruleRepository;
     private final EventRepository eventRepository;
-    private final GenericScraper genericScraper;
+    private final ScraperFactory scraperFactory;
     private final HtmlStorage htmlStorage;
 
     public ScrapeOrchestrationService(
             ScrapeRuleRepository ruleRepository,
             EventRepository eventRepository,
-            GenericScraper genericScraper,
+            ScraperFactory scraperFactory,
             HtmlStorage htmlStorage) {
         this.ruleRepository = ruleRepository;
         this.eventRepository = eventRepository;
-        this.genericScraper = genericScraper;
+        this.scraperFactory = scraperFactory;
         this.htmlStorage = htmlStorage;
     }
 
@@ -98,29 +102,28 @@ public class ScrapeOrchestrationService {
         result.siteName = rule.getSiteName();
         
         try {
+            // Select appropriate scraper based on extraction mode
+            EventScraper scraper = scraperFactory.getScraper(rule);
+            logger.info("Using {} for {}", scraper.getName(), rule.getSiteName());
+            
             List<Event> events;
             
-            // Check if this is a JavaScript-heavy site that needs fresh rendering
-            boolean isJsHeavySite = rule.getSiteName().toLowerCase().contains("savedate.io");
-            
-            // Check if we have cached HTML for today (but skip for JS-heavy sites)
-            if (!isJsHeavySite && htmlStorage.exists(rule.getSiteName())) {
+            // Check if we have cached HTML for today
+            if (htmlStorage.exists(rule.getSiteName())) {
                 logger.info("Using cached HTML for {}", rule.getSiteName());
                 String cachedHtml = htmlStorage.loadHtml(rule.getSiteName());
                 
-                // Parse cached HTML directly
-                events = genericScraper.scrapeWithRule(rule, cachedHtml);
+                // Parse cached HTML using selected scraper
+                events = scraper.scrapeFromHtml(rule, cachedHtml);
                 
             } else {
-                logger.info("Fetching fresh HTML for {} (JavaScript-intensive: {})", 
-                    rule.getSiteName(), isJsHeavySite);
+                logger.info("Fetching fresh HTML for {}", rule.getSiteName());
                 
-                // Fetch and scrape
-                events = genericScraper.scrapeWithRule(rule);
+                // Fetch and scrape using selected scraper
+                events = scraper.scrapeFromUrl(rule, rule.getBaseUrl());
                 
                 // Store HTML for future offline analysis
-                // Fetch HTML once more for storage (GenericScraper already fetched it)
-                // still todo: Optimize to avoid double fetch
+                // Note: WordPress scraper uses API so we fetch HTML separately for caching
                 try {
                     Document doc = Jsoup.connect(rule.getBaseUrl())
                             .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
@@ -186,7 +189,7 @@ public class ScrapeOrchestrationService {
      */
     @Transactional
     public ScrapeSiteResult scrapeBySiteName(String siteName) {
-        Optional<ScrapeRule> ruleOpt = ruleRepository.findBySiteName(siteName);
+        Optional<ScrapeRule> ruleOpt = resolveRuleBySiteName(siteName);
         
         if (ruleOpt.isEmpty()) {
             ScrapeSiteResult result = new ScrapeSiteResult();
@@ -205,6 +208,69 @@ public class ScrapeOrchestrationService {
         }
         
         return scrapeSite(rule);
+    }
+
+    @Transactional
+    public Map<String, Object> clearEventsBySiteName(String siteName) {
+        Map<String, Object> result = new HashMap<>();
+
+        Optional<ScrapeRule> ruleOpt = resolveRuleBySiteName(siteName);
+        if (ruleOpt.isEmpty()) {
+            result.put("siteName", siteName);
+            result.put("deleted", 0);
+            result.put("error", "No scrape rule found for site: " + siteName);
+            result.put("timestamp", LocalDateTime.now());
+            return result;
+        }
+
+        ScrapeRule rule = ruleOpt.get();
+        long deleted = eventRepository.deleteByScrapedFrom(rule.getSiteName());
+
+        logger.info("Deleted {} events for site {}", deleted, rule.getSiteName());
+
+        result.put("siteName", rule.getSiteName());
+        result.put("deleted", deleted);
+        result.put("timestamp", LocalDateTime.now());
+        return result;
+    }
+
+    private Optional<ScrapeRule> resolveRuleBySiteName(String siteName) {
+        if (siteName == null) {
+            return Optional.empty();
+        }
+
+        String raw = siteName.trim();
+        if (raw.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Set<String> candidates = new LinkedHashSet<>();
+        candidates.add(raw);
+
+        String decoded = URLDecoder.decode(raw, StandardCharsets.UTF_8);
+        candidates.add(decoded);
+
+        String slashNormalized = decoded.replace("%2F", "/").replace("%40", "@");
+        candidates.add(slashNormalized);
+
+        for (String candidate : candidates) {
+            Optional<ScrapeRule> exact = ruleRepository.findBySiteName(candidate);
+            if (exact.isPresent()) {
+                return exact;
+            }
+        }
+
+        String canonical = canonicalSiteName(decoded);
+        return ruleRepository.findAll().stream()
+            .filter(rule -> canonicalSiteName(rule.getSiteName()).equals(canonical))
+            .findFirst();
+    }
+
+    private String canonicalSiteName(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().toLowerCase(Locale.ROOT).replace("%2f", "/").replace("%40", "@");
     }
 
     /**

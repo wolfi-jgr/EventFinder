@@ -17,7 +17,7 @@ public class ScrapedEvent {
     private String location;
     private Double latitude;
     private Double longitude;
-    private String category;
+    private String category; //genre or type of event
     private String imageUrl;
     private String organizer;
     private BigDecimal priceFrom;

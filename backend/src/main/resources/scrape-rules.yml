@@ -1,0 +1,104 @@
+scrape-rules:
+  delete-missing-rules: false
+  rules:
+    - site-name: theloft.at
+      base-url: https://www.theloft.at/programm/
+      event-list-selector: a[href*="/programm/"]
+      event-item-selector: a[href*="/programm/"]
+      title-selector: a
+      date-selector: a
+      price-selector: a
+      venue-selector: a
+      link-selector: a
+      date-format: "E. d.M.yyyy HH:mm"
+      date-locale: de-DE
+      extraction-mode: REGEX
+      event-text-pattern: '([A-Za-z]{2}\.\s+\d{1,2}\.\d{1,2}\.\d{4}\s+\d{1,2}:\d{2}),?\s*(?:Eintritt:\s*)?(.*?)\s+([A-ZÄÖÜ][^\s]+(?:\s+[A-ZÄÖÜ][^\s]+)*?)\s+(Oben|Unten|Wohnzimmer|Keller|Dachboden)'
+      category: Event
+      organizer: The Loft
+      enabled: true
+      ai-enabled: true
+      requires-detail-page-fetch: false
+      notes: "The Loft - WordPress site. Uses REST API /wp-json/wp/v2/posts if available. Falls back to REGEX extraction from link text."
+
+    - site-name: grelleforelle.com
+      base-url: https://grelleforelle.com/programm
+      event-list-selector: .events-list, .event-grid
+      event-item-selector: .et_pb_portfolio_item
+      title-selector: .et_pb_portfolio_title, h2, h3
+      date-selector: .event-date, .date, time
+      price-selector: .event-price, .price
+      venue-selector: .event-location, .venue
+      link-selector: a
+      image-selector: .event-image img, img
+      date-format: d/M
+      date-locale: de-DE
+      extraction-mode: CSS_SELECTOR
+      category: Music
+      organizer: Grelle Forelle
+      enabled: true
+      ai-enabled: true
+      requires-detail-page-fetch: false
+      notes: "Electronic music venue in Vienna. Uses .et_pb_portfolio_item selectors."
+
+    - site-name: daswerk.org
+      base-url: https://www.daswerk.org/programm/
+      event-list-selector: .events--preview-container .css-events-list
+      event-item-selector: .events--preview-item
+      title-selector: .preview-item--headline, .preview-item--headline a
+      date-selector: .preview-item--information li
+      price-selector: .price, .eintritt
+      venue-selector: .preview-item-description + p
+      link-selector: .preview-item--link
+      image-selector: .events--preview-item img
+      description-selector: .preview-item-description
+      date-format: d. MMMM yyyy HH:mm
+      date-locale: de-DE
+      extraction-mode: CSS_SELECTOR
+      category: Culture
+      organizer: Das Werk
+      enabled: true
+      ai-enabled: true
+      requires-detail-page-fetch: false
+      notes: "Das Werk - uses .events--preview-item cards. Date/time extracted from all .preview-item--information li entries, title from .preview-item--headline, link from .preview-item--link."
+
+    - site-name: savedate.io/@prst
+      base-url: https://savedate.io/@prst
+      event-list-selector: 'event-list'
+      event-item-selector: 'event-list > .card > event-thumbnail > .scaling-container'
+      title-selector: '.text-container .event-name'
+      date-selector: '.date-square-container date-square svg text'
+      price-selector: 'none'
+      venue-selector: '.location-ticket .location'
+      link-selector: '.location-ticket a.ticket-container'
+      image-selector: '.image-container img, shared-image img'
+      description-selector: 'none'
+      date-format: "d MMM"
+      date-locale: en-GB
+      extraction-mode: CSS_SELECTOR
+      category: Event
+      organizer: PRST
+      enabled: true
+      ai-enabled: true
+      requires-detail-page-fetch: false
+      notes: "Savedate.io/@prst - Angular SPA. Event cards in .scaling-container with SVG date squares. Time in 3rd SVG text element (23:00 format). Cached HTML sufficient."
+
+    - site-name: falter.at
+      base-url: https://www.falter.at/events
+      event-list-selector: body
+      event-item-selector: a[data-section="item"]
+      title-selector: h1
+      date-selector: time
+      venue-selector: .lining-nums
+      link-selector: this
+      image-selector: figure img
+      description-selector: p.pb-1\.5
+      date-format: "EEEE, HH:mm"
+      date-locale: de-AT
+      extraction-mode: CSS_SELECTOR
+      category: Culture
+      organizer: Falter
+      enabled: true
+      ai-enabled: false
+      requires-detail-page-fetch: false
+      notes: "Falter.at - semantic HTML with German day names parsed by parseGermanDayName()."

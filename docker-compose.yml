@@ -27,6 +27,8 @@ services:
       SPRING_DATASOURCE_USERNAME: eventfinder
       SPRING_DATASOURCE_PASSWORD: eventfinder
       APP_CORS_ORIGINS: "*"
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
     volumes:
       - ./backend:/workspace
       - m2_cache:/root/.m2
