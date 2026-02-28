@@ -344,8 +344,6 @@ public class GenericScraper extends BaseWebScraper {
     private boolean isJavaScriptHeavySite(String siteName) {
         // List of sites that are known to render events using JavaScript
         Set<String> jsHeavySites = Set.of(
-            "savedate.io/@prst",
-            "savedate.io",
             "eventsfinder",
             "react-events"
         );
