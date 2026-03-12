@@ -7,7 +7,46 @@ import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
 import { APP_CONFIG } from "@shared/frontendConfig";
 
+// ── Category metadata matching the backend EventCategory enum ──────────────
+export const CATEGORY_INFO = {
+  CONCERT:    { label: "Konzert",       icon: "🎵" },
+  PARTY:      { label: "Party",         icon: "🎉" },
+  THEATER:    { label: "Theater",       icon: "🎭" },
+  EXHIBITION: { label: "Ausstellung",   icon: "🖼️" },
+  SPORTS:     { label: "Sport",         icon: "⚽" },
+  FOOD:       { label: "Food",          icon: "🍕" },
+  BUSINESS:   { label: "Business",      icon: "💼" },
+  WORKSHOP:   { label: "Workshop",      icon: "🔧" },
+  FAMILY:     { label: "Familie",       icon: "👨‍👩‍👧" },
+  EVENT:      { label: "Veranstaltung", icon: "📅" },
+  OTHER:      { label: "Sonstiges",     icon: "✨" },
+};
+
+const formatDate = (d) => d.toISOString().slice(0, 10);
+
+const getEventDateKey = (event) => {
+  if (event.startDate) return event.startDate;
+  if (event.startDateTime) return String(event.startDateTime).slice(0, 10);
+  return "";
+};
+
+const getEventTimestamp = (event) => {
+  if (event.startDateTime) {
+    const parsed = new Date(event.startDateTime).getTime();
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
+  if (event.startDate) {
+    const time = event.startTime || "00:00:00";
+    const parsed = new Date(`${event.startDate}T${time}`).getTime();
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
+  return 0;
+};
+
 const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
+
 export default function App() {
   const [coords, setCoords] = useState(DEFAULT_COORDS);
   const [places, setPlaces] = useState([]);
@@ -23,6 +62,57 @@ export default function App() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sortMode, setSortMode] = useState("date-asc");
+  const [activeDatePreset, setActiveDatePreset] = useState(""); // "today"|"tomorrow"|"weekend"
+
+  // ── Date-preset helpers ───────────────────────────────────────────────────
+  const applyDatePreset = (preset) => {
+    if (activeDatePreset === preset) {
+      // second click toggles off
+      setDateFrom("");
+      setDateTo("");
+      setActiveDatePreset("");
+      return;
+    }
+    const now = new Date();
+    if (preset === "today") {
+      const d = formatDate(now);
+      setDateFrom(d);
+      setDateTo(d);
+    } else if (preset === "tomorrow") {
+      const t = new Date(now);
+      t.setDate(now.getDate() + 1);
+      const d = formatDate(t);
+      setDateFrom(d);
+      setDateTo(d);
+    } else if (preset === "weekend") {
+      const dow = now.getDay(); // 0 = Sun, 6 = Sat
+      let from, to;
+      if (dow === 6) {
+        // today is Saturday
+        from = new Date(now);
+        to = new Date(now);
+        to.setDate(now.getDate() + 1);
+      } else if (dow === 0) {
+        // today is Sunday
+        from = new Date(now);
+        to = new Date(now);
+      } else {
+        // weekday → next Sat + Sun
+        const daysToSat = 6 - dow;
+        from = new Date(now);
+        from.setDate(now.getDate() + daysToSat);
+        to = new Date(from);
+        to.setDate(from.getDate() + 1);
+      }
+      setDateFrom(formatDate(from));
+      setDateTo(formatDate(to));
+    }
+    setActiveDatePreset(preset);
+  };
+
+  // Clear active preset label when user types a date manually
+  const handleDateFromChange = (val) => { setDateFrom(val); setActiveDatePreset(""); };
+  const handleDateToChange   = (val) => { setDateTo(val);   setActiveDatePreset(""); };
 
   // Load data on initial mount (without scraping)
   useEffect(() => {
@@ -71,7 +161,7 @@ export default function App() {
       const scrapingResponse = await fetch(`${API_BASE}/api/scraping/rules/run`, {
         method: "POST",
       });
-      
+
       if (!scrapingResponse.ok) {
         throw new Error(`Scraping failed with ${scrapingResponse.status}`);
       }
@@ -82,24 +172,28 @@ export default function App() {
       // Step 2: Load fresh data from database
       setLoadingMessage("Loading fresh data...");
       await loadDataFromDatabase();
-      
+
       setLoadingMessage("");
-      
+
       // Show detailed results
       const newEvents = scrapingResult.totalNew || 0;
       const duplicates = scrapingResult.totalDuplicates || 0;
       const sitesProcessed = scrapingResult.sitesProcessed || 0;
-      
+
       if (newEvents > 0) {
-        let message = `✓ Scraping complete! ${newEvents} new event${newEvents !== 1 ? 's' : ''} from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''}`;
+        let message = `✓ Scraping complete! ${newEvents} new event${newEvents !== 1 ? "s" : ""} from ${sitesProcessed} website${sitesProcessed !== 1 ? "s" : ""}`;
         if (duplicates > 0) {
-          message += `, ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} skipped`;
+          message += `, ${duplicates} duplicate${duplicates !== 1 ? "s" : ""} skipped`;
         }
         setError(message);
       } else if (duplicates > 0) {
-        setError(`✓ Scraping complete! ${duplicates} duplicate${duplicates !== 1 ? 's' : ''} found from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''} (no new events)`);
+        setError(
+          `✓ Scraping complete! ${duplicates} duplicate${duplicates !== 1 ? "s" : ""} found from ${sitesProcessed} website${sitesProcessed !== 1 ? "s" : ""} (no new events)`
+        );
       } else {
-        setError(`Scraping completed from ${sitesProcessed} website${sitesProcessed !== 1 ? 's' : ''}, but no events found.`);
+        setError(
+          `Scraping completed from ${sitesProcessed} website${sitesProcessed !== 1 ? "s" : ""}, but no events found.`
+        );
       }
     } catch (err) {
       setError(err.message || "Scraping failed");
@@ -127,9 +221,9 @@ export default function App() {
       const matchesLocation = selectedLocation === "all" || location === selectedLocation;
       const matchesCategory = selectedCategory === "all" || category === selectedCategory;
 
-      const eventDate = event.startDateTime ? new Date(event.startDateTime) : null;
-      const fromOk = !dateFrom || (eventDate && eventDate >= new Date(dateFrom));
-      const toOk = !dateTo || (eventDate && eventDate <= new Date(dateTo));
+      const eventDateKey = getEventDateKey(event);
+      const fromOk = !dateFrom || (eventDateKey && eventDateKey >= dateFrom);
+      const toOk = !dateTo || (eventDateKey && eventDateKey <= dateTo);
 
       return matchesSearch && matchesSource && matchesLocation && matchesCategory && fromOk && toOk;
     })
@@ -137,13 +231,17 @@ export default function App() {
       if (sortMode === "title") {
         return (a.title || "").localeCompare(b.title || "");
       }
-      const aDate = a.startDateTime ? new Date(a.startDateTime).getTime() : 0;
-      const bDate = b.startDateTime ? new Date(b.startDateTime).getTime() : 0;
+      const aDate = getEventTimestamp(a);
+      const bDate = getEventTimestamp(b);
       return sortMode === "date-desc" ? bDate - aDate : aDate - bDate;
     });
 
-  const uniqueSources = Array.from(new Set(events.map(getSourceLabel))).sort((a, b) => a.localeCompare(b));
-  const uniqueLocations = Array.from(new Set(events.map(getLocationLabel))).sort((a, b) => a.localeCompare(b));
+  const uniqueSources = Array.from(new Set(events.map(getSourceLabel))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const uniqueLocations = Array.from(new Set(events.map(getLocationLabel))).sort((a, b) =>
+    a.localeCompare(b)
+  );
   const uniqueCategories = Array.from(
     new Set(events.map((event) => event.category || "Uncategorized"))
   ).sort((a, b) => a.localeCompare(b));
@@ -156,19 +254,15 @@ export default function App() {
       const sourceKey = getSourceLabel(event);
       const locationKey = getLocationLabel(event);
 
-      if (!grouped[sourceKey]) {
-        grouped[sourceKey] = {};
-      }
-      if (!grouped[sourceKey][locationKey]) {
-        grouped[sourceKey][locationKey] = [];
-      }
+      if (!grouped[sourceKey]) grouped[sourceKey] = {};
+      if (!grouped[sourceKey][locationKey]) grouped[sourceKey][locationKey] = [];
       grouped[sourceKey][locationKey].push(event);
     });
 
     Object.keys(grouped).forEach((source) => {
       Object.keys(grouped[source]).forEach((location) => {
         grouped[source][location].sort(
-          (a, b) => new Date(a.startDateTime) - new Date(b.startDateTime)
+          (a, b) => getEventTimestamp(a) - getEventTimestamp(b)
         );
       });
     });
@@ -196,12 +290,14 @@ export default function App() {
         </div>
         <div className="field">
           <label htmlFor="source">Source</label>
-          <select id="source" value={selectedSource} onChange={(event) => setSelectedSource(event.target.value)}>
+          <select
+            id="source"
+            value={selectedSource}
+            onChange={(event) => setSelectedSource(event.target.value)}
+          >
             <option value="all">All sources</option>
             {uniqueSources.map((source) => (
-              <option key={source} value={source}>
-                {source}
-              </option>
+              <option key={source} value={source}>{source}</option>
             ))}
           </select>
         </div>
@@ -214,9 +310,7 @@ export default function App() {
           >
             <option value="all">All locations</option>
             {uniqueLocations.map((location) => (
-              <option key={location} value={location}>
-                {location}
-              </option>
+              <option key={location} value={location}>{location}</option>
             ))}
           </select>
         </div>
@@ -228,9 +322,11 @@ export default function App() {
             onChange={(event) => setSelectedCategory(event.target.value)}
           >
             <option value="all">All genres</option>
-            {uniqueCategories.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {uniqueCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {CATEGORY_INFO[cat]
+                  ? `${CATEGORY_INFO[cat].icon} ${CATEGORY_INFO[cat].label}`
+                  : cat}
               </option>
             ))}
           </select>
@@ -241,7 +337,7 @@ export default function App() {
             id="dateFrom"
             type="date"
             value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
+            onChange={(e) => handleDateFromChange(e.target.value)}
           />
         </div>
         <div className="field">
@@ -250,12 +346,16 @@ export default function App() {
             id="dateTo"
             type="date"
             value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
+            onChange={(e) => handleDateToChange(e.target.value)}
           />
         </div>
         <div className="field">
           <label htmlFor="sort">Sort</label>
-          <select id="sort" value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+          <select
+            id="sort"
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value)}
+          >
             <option value="date-asc">Date (earliest)</option>
             <option value="date-desc">Date (latest)</option>
             <option value="title">Title (A-Z)</option>
@@ -266,23 +366,78 @@ export default function App() {
         </button>
       </section>
 
-      {error && <p className={error.startsWith('✓') ? "success" : "error"}>{error}</p>}
+      {error && (
+        <p className={error.startsWith("✓") ? "success" : "error"}>{error}</p>
+      )}
+
+      {/* ── Quick-filter bar: date presets + category chips ── */}
+      <section className="quick-filters">
+        <div className="filter-group">
+          <span className="filter-group-label">Wann</span>
+          <div className="chip-row">
+            {[
+              { id: "today",    label: "Heute" },
+              { id: "tomorrow", label: "Morgen" },
+              { id: "weekend",  label: "Wochenende" },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                className={`chip-btn date-chip${activeDatePreset === id ? " active" : ""}`}
+                onClick={() => applyDatePreset(id)}
+              >
+                {label}
+              </button>
+            ))}
+            {(dateFrom || dateTo) && (
+              <button
+                className="chip-btn clear-chip"
+                onClick={() => { setDateFrom(""); setDateTo(""); setActiveDatePreset(""); }}
+              >
+                ✕ Datum
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="filter-group">
+          <span className="filter-group-label">Genre</span>
+          <div className="chip-row">
+            {Object.entries(CATEGORY_INFO).map(([key, { label, icon }]) => (
+              <button
+                key={key}
+                className={`chip-btn category-chip${selectedCategory === key ? " active" : ""}`}
+                onClick={() => setSelectedCategory(selectedCategory === key ? "all" : key)}
+              >
+                {icon} {label}
+              </button>
+            ))}
+            {selectedCategory !== "all" && (
+              <button
+                className="chip-btn clear-chip"
+                onClick={() => setSelectedCategory("all")}
+              >
+                ✕ Genre
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="tabs">
-        <button 
-          className={activeTab === "events" ? "active" : ""} 
+        <button
+          className={activeTab === "events" ? "active" : ""}
           onClick={() => setActiveTab("events")}
         >
           Events ({events.length})
         </button>
-        <button 
-          className={activeTab === "places" ? "active" : ""} 
+        <button
+          className={activeTab === "places" ? "active" : ""}
           onClick={() => setActiveTab("places")}
         >
           Places ({places.length})
         </button>
-        <button 
-          className={activeTab === "admin" ? "active" : ""} 
+        <button
+          className={activeTab === "admin" ? "active" : ""}
           onClick={() => setActiveTab("admin")}
         >
           Admin
@@ -305,7 +460,20 @@ export default function App() {
                   .map(([source, locations]) => (
                     <div key={source} className="source-section">
                       <div className="source-header">
-                        <h3 className="source-name">🧭 {source}</h3>
+                        <h3
+                          className="source-name"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedSource(source)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedSource(source);
+                            }
+                          }}
+                        >
+                          🧭 <u>{source}</u>
+                        </h3>
                       </div>
                       <div className="source-locations">
                         {Object.entries(locations)

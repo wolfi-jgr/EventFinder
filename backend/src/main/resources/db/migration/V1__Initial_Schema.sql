@@ -1,5 +1,5 @@
 -- EventFinder Database Schema - V1 (Consolidated)
--- Complete initial schema + seed data for clean rule-based scraping system
+-- Complete initial schema + seed data + category normalization for clean rule-based scraping system
 -- Single migration to avoid Flyway checksum validation issues
 
 -- Create events table with all necessary fields for modern scraping
@@ -7,8 +7,10 @@ CREATE TABLE events (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description VARCHAR(2000),
-    start_date_time TIMESTAMP NOT NULL,
-    end_date_time TIMESTAMP,
+    start_date DATE NOT NULL,
+    start_time TIME,
+    end_date DATE,
+    end_time TIME,
     location VARCHAR(255),
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
@@ -40,7 +42,7 @@ CREATE TABLE events (
     updated_at TIMESTAMP,
     last_updated TIMESTAMP,
     
-    CONSTRAINT events_start_date_time_check CHECK (start_date_time IS NOT NULL)
+    CONSTRAINT events_start_date_check CHECK (start_date IS NOT NULL)
 );
 
 -- Create places table for cached location data
@@ -113,7 +115,8 @@ CREATE INDEX idx_event_dedup_hash ON events(dedup_hash);
 CREATE INDEX idx_event_scraped_from ON events(scraped_from);
 CREATE INDEX idx_event_created_at ON events(created_at);
 CREATE INDEX idx_event_is_recurring ON events(is_recurring);
-CREATE INDEX idx_events_start_date ON events(start_date_time);
+CREATE INDEX idx_events_start_date ON events(start_date);
+CREATE INDEX idx_events_start_time ON events(start_time);
 CREATE INDEX idx_events_category ON events(category);
 CREATE INDEX idx_events_location ON events(location);
 CREATE INDEX idx_venues_name ON venues(name);
@@ -220,3 +223,60 @@ INSERT INTO scrape_rules (
     'Falter.at - Vienna culture & events. Uses semantic HTML with data attributes. Date format includes German day names (Montag, Dienstag, etc.) parsed by parseGermanDayName() method.',
     CURRENT_TIMESTAMP
 );
+
+-- --------------------------------------------------------------------------
+-- Category normalization to EventCategory enum names
+-- (Merged from former V2__Normalize_Categories.sql)
+-- --------------------------------------------------------------------------
+
+-- CONCERT
+UPDATE events SET category = 'CONCERT'
+WHERE lower(category) IN ('music', 'konzert', 'concert', 'live musik', 'live music',
+                                                    'musik', 'gig', 'band', 'dj', 'festival');
+
+-- PARTY
+UPDATE events SET category = 'PARTY'
+WHERE lower(category) IN ('party', 'night', 'clubnight', 'rave', 'dance');
+
+-- THEATER
+UPDATE events SET category = 'THEATER'
+WHERE lower(category) IN ('theater', 'theatre', 'oper', 'opera', 'schauspiel',
+                                                    'kabarett', 'cabaret', 'bühne', 'comedy');
+
+-- EXHIBITION
+UPDATE events SET category = 'EXHIBITION'
+WHERE lower(category) IN ('ausstellung', 'exhibition', 'galerie', 'gallery',
+                                                    'kunst', 'vernissage', 'art', 'installation');
+
+-- SPORTS
+UPDATE events SET category = 'SPORTS'
+WHERE lower(category) IN ('sport', 'sports', 'fitness', 'yoga', 'turnier',
+                                                    'tournament', 'match', 'marathon');
+
+-- FOOD
+UPDATE events SET category = 'FOOD'
+WHERE lower(category) IN ('food', 'essen', 'kulinarisch', 'markt', 'market',
+                                                    'brunch', 'tasting', 'wine', 'wein', 'cooking');
+
+-- BUSINESS
+UPDATE events SET category = 'BUSINESS'
+WHERE lower(category) IN ('conference', 'konferenz', 'meetup', 'networking',
+                                                    'talk', 'seminar', 'summit', 'lecture', 'vortrag');
+
+-- WORKSHOP
+UPDATE events SET category = 'WORKSHOP'
+WHERE lower(category) IN ('workshop', 'kurs', 'course', 'class', 'kreativ', 'craft');
+
+-- FAMILY
+UPDATE events SET category = 'FAMILY'
+WHERE lower(category) IN ('family', 'familien', 'kinder', 'kids', 'jugend', 'youth');
+
+-- Anything remaining that is non-null and not already an enum name → OTHER
+UPDATE events SET category = 'OTHER'
+WHERE category IS NOT NULL
+    AND category NOT IN ('CONCERT','PARTY','THEATER','EXHIBITION','SPORTS',
+                                             'FOOD','BUSINESS','WORKSHOP','FAMILY','EVENT','OTHER');
+
+-- Rows with no category → EVENT (generic fallback)
+UPDATE events SET category = 'EVENT'
+WHERE category IS NULL OR trim(category) = '';

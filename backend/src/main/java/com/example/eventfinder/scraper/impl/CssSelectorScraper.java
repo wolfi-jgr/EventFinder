@@ -20,6 +20,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Scraper implementation for CSS selector-based extraction.
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 @Component
 public class CssSelectorScraper extends HtmlBasedScraper implements EventScraper {
     private static final Logger logger = LoggerFactory.getLogger(CssSelectorScraper.class);
+    private static final Pattern HREF_PATTERN = Pattern.compile("href\\s*=\\s*['\"]([^'\"]+)['\"]", Pattern.CASE_INSENSITIVE);
+    private static final Pattern DATA_HREF_PATTERN = Pattern.compile("data-href\\s*=\\s*['\"]([^'\"]+)['\"]", Pattern.CASE_INSENSITIVE);
     
     public CssSelectorScraper(ScraperConfig config) {
         super(config);
@@ -71,14 +75,7 @@ public class CssSelectorScraper extends HtmlBasedScraper implements EventScraper
             try {
                 ScrapedEvent scraped = new ScrapedEvent();
 
-                String linkHref = null;
-                if (rule.getLinkSelector() != null) {
-                    Element linkEl = item.selectFirst(rule.getLinkSelector());
-                    linkHref = HtmlExtractor.safeAttr(linkEl, "href");
-                    if (linkHref != null && !linkHref.startsWith("http")) {
-                        linkHref = new java.net.URL(new java.net.URL(rule.getBaseUrl()), linkHref).toString();
-                    }
-                }
+                String linkHref = extractLinkHref(item, rule);
                 
                 // Extract title
                 if (rule.getTitleSelector() != null) {
@@ -153,5 +150,68 @@ public class CssSelectorScraper extends HtmlBasedScraper implements EventScraper
         
         logger.info("[{}] Successfully extracted {} events from {}", getName(), events.size(), rule.getSiteName());
         return events;
+    }
+
+    private String extractLinkHref(Element item, ScrapeRule rule) {
+        if (rule.getLinkSelector() == null || rule.getLinkSelector().isBlank()) {
+            return null;
+        }
+
+        String selector = rule.getLinkSelector().trim();
+        Element linkElement;
+
+        if ("this".equalsIgnoreCase(selector)) {
+            linkElement = item;
+        } else {
+            linkElement = item.selectFirst(selector);
+        }
+
+        String linkHref = HtmlExtractor.safeAttr(linkElement, "href");
+        if (linkHref == null) {
+            linkHref = HtmlExtractor.safeAttr(linkElement, "data-href");
+        }
+        if (linkHref == null && linkElement != null) {
+            linkHref = extractHrefFromHtml(linkElement.outerHtml());
+        }
+        if (linkHref == null) {
+            linkHref = extractHrefFromHtml(item.outerHtml());
+        }
+
+        return resolveAbsoluteUrl(linkHref, rule.getBaseUrl());
+    }
+
+    private String extractHrefFromHtml(String html) {
+        if (html == null || html.isBlank()) {
+            return null;
+        }
+
+        Matcher hrefMatcher = HREF_PATTERN.matcher(html);
+        if (hrefMatcher.find()) {
+            return hrefMatcher.group(1);
+        }
+
+        Matcher dataHrefMatcher = DATA_HREF_PATTERN.matcher(html);
+        if (dataHrefMatcher.find()) {
+            return dataHrefMatcher.group(1);
+        }
+
+        return null;
+    }
+
+    private String resolveAbsoluteUrl(String linkHref, String baseUrl) {
+        if (linkHref == null || linkHref.isBlank()) {
+            return null;
+        }
+
+        if (linkHref.startsWith("http://") || linkHref.startsWith("https://")) {
+            return linkHref;
+        }
+
+        try {
+            return new java.net.URL(new java.net.URL(baseUrl), linkHref).toString();
+        } catch (Exception ex) {
+            logger.debug("[{}] Could not resolve relative link '{}' against base '{}': {}", getName(), linkHref, baseUrl, ex.getMessage());
+            return linkHref;
+        }
     }
 }

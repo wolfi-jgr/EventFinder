@@ -16,7 +16,8 @@ import { APP_CONFIG, MOBILE_THEME } from "../shared/frontendConfig";
 
 const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
 
-const formatDateTime = (dateTime) => {
+const formatDateTime = (event) => {
+  const dateTime = event.startDateTime || (event.startDate ? `${event.startDate}T${event.startTime || "00:00:00"}` : null);
   if (!dateTime) return "";
   const date = new Date(dateTime);
   return date.toLocaleString("de-AT", {
@@ -114,8 +115,8 @@ export default function App() {
   const renderEvent = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
-      {item.startDateTime ? (
-        <Text style={styles.detail}>📅 {formatDateTime(item.startDateTime)}</Text>
+      {(item.startDateTime || item.startDate) ? (
+        <Text style={styles.detail}>📅 {formatDateTime(item)}</Text>
       ) : null}
       {item.location ? <Text style={styles.detail}>📍 {item.location}</Text> : null}
       {item.organizer ? <Text style={styles.detail}>👤 {item.organizer}</Text> : null}

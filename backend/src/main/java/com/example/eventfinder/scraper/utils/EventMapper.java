@@ -1,6 +1,7 @@
 package com.example.eventfinder.scraper.utils;
 
 import com.example.eventfinder.model.Event;
+import com.example.eventfinder.model.EventCategory;
 import com.example.eventfinder.model.ScrapeRule;
 import com.example.eventfinder.scraper.ScrapedEvent;
 
@@ -27,7 +28,7 @@ public class EventMapper {
         event.setLocation(scraped.getLocation());
         event.setLatitude(scraped.getLatitude());
         event.setLongitude(scraped.getLongitude());
-        event.setCategory(scraped.getCategory());
+        event.setCategory(resolveCategory(scraped));
         event.setImageUrl(scraped.getImageUrl());
         event.setOrganizer(scraped.getOrganizer());
         event.setSourceUrl(scraped.getSourceUrl());
@@ -67,6 +68,26 @@ public class EventMapper {
         return event;
     }
     
+    /**
+     * Resolve category: use the scraped/rule-provided value if it maps to a known
+     * EventCategory, otherwise auto-classify from title + description.
+     */
+    private static String resolveCategory(ScrapedEvent scraped) {
+        // Check if a category string was already provided (e.g. from scrape-rules.yml)
+        String raw = scraped.getCategory();
+        if (raw != null && !raw.isBlank()) {
+            // If it already looks like one of our enum names, keep it
+            EventCategory known = CategoryClassifier.fromString(raw);
+            if (known != null) {
+                return known.name();
+            }
+            // Non-empty but not an enum name – try to classify the raw string itself as hint
+            // (fall through to full classification which also uses title/desc)
+        }
+        // Auto-classify from title + description
+        return CategoryClassifier.classifyAsString(scraped.getTitle(), scraped.getDescription());
+    }
+
     /**
      * Calculate deduplication hash for event identification
      */

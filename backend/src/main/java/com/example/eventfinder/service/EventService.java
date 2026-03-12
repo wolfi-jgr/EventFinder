@@ -5,7 +5,8 @@ import com.example.eventfinder.repository.EventRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public class EventService {
      * Get upcoming events (events that haven't ended yet)
      */
     public List<Event> getUpcomingEvents() {
-        return eventRepository.findUpcomingEvents(LocalDateTime.now());
+        return eventRepository.findUpcomingEvents(LocalDate.now(), LocalTime.now());
     }
 
     /**
@@ -49,7 +50,7 @@ public class EventService {
     /**
      * Get events within a date range
      */
-    public List<Event> getEventsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+    public List<Event> getEventsByDateRange(LocalDate startDate, LocalDate endDate) {
         return eventRepository.findEventsByDateRange(startDate, endDate);
     }
 
@@ -145,7 +146,8 @@ public class EventService {
             // Check for duplicates
             List<Event> existingEvents = eventRepository.findDuplicateEvents(
                 event.getTitle(),
-                event.getStartDateTime(),
+                event.getStartDate(),
+                event.getStartTime(),
                 event.getLocation()
             );
             

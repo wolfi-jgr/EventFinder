@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "events")
@@ -19,11 +21,17 @@ public class Event {
     @Column(length = 2000)
     private String description;
 
-    @Column(name = "start_date_time", nullable = false)
-    private LocalDateTime startDateTime;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
-    @Column(name = "end_date_time")
-    private LocalDateTime endDateTime;
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
 
     private String location;
 
@@ -124,20 +132,72 @@ public class Event {
         this.description = description;
     }
 
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    @Transient
     public LocalDateTime getStartDateTime() {
-        return startDateTime;
+        if (startDate == null) {
+            return null;
+        }
+        return LocalDateTime.of(startDate, startTime != null ? startTime : LocalTime.MIDNIGHT);
     }
 
     public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
+        if (startDateTime == null) {
+            this.startDate = null;
+            this.startTime = null;
+            return;
+        }
+        this.startDate = startDateTime.toLocalDate();
+        this.startTime = startDateTime.toLocalTime();
     }
 
+    @Transient
     public LocalDateTime getEndDateTime() {
-        return endDateTime;
+        if (endDate == null) {
+            return null;
+        }
+        return LocalDateTime.of(endDate, endTime != null ? endTime : LocalTime.MIDNIGHT);
     }
 
     public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
+        if (endDateTime == null) {
+            this.endDate = null;
+            this.endTime = null;
+            return;
+        }
+        this.endDate = endDateTime.toLocalDate();
+        this.endTime = endDateTime.toLocalTime();
     }
 
     public String getLocation() {

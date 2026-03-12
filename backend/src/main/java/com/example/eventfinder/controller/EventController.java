@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -55,12 +55,12 @@ public class EventController {
 
     /**
      * GET /api/events/search - Search events by date range
-     * Example: /api/events/search?startDate=2026-02-14T00:00:00&endDate=2026-02-28T23:59:59
+     * Example: /api/events/search?startDate=2026-02-14&endDate=2026-02-28
      */
     @GetMapping("/search")
     public List<Event> searchEventsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return eventService.getEventsByDateRange(startDate, endDate);
     }
 

@@ -1,7 +1,8 @@
 import "./EventCard.css";
 
 export default function EventCard({ event }) {
-  const formatDateTime = (dateTime) => {
+  const formatDateTime = () => {
+    const dateTime = event.startDateTime || (event.startDate ? `${event.startDate}T${event.startTime || "00:00:00"}` : null);
     if (!dateTime) return "";
     const date = new Date(dateTime);
     return date.toLocaleString('de-AT', {
@@ -32,7 +33,7 @@ export default function EventCard({ event }) {
       <div className="event-card-body">
         <div className="event-card-date">
           <span className="calendar-icon">📅</span>
-          <span>{formatDateTime(event.startDateTime)}</span>
+          <span>{formatDateTime()}</span>
         </div>
 
         {event.venue && (

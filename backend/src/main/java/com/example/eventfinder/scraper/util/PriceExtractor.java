@@ -29,7 +29,7 @@ public class PriceExtractor {
         event.setPriceNote(priceStr);
         
         // Free events
-        if (priceStr.matches("(?i).*(frei|free|kostenlos).*")) {
+        if (priceStr.matches("(?i).*(frei|free|kostenlos|gratis|FREI|FREIER|EINTRITT).*")) {
             event.setPriceFrom(BigDecimal.ZERO);
             return;
         }

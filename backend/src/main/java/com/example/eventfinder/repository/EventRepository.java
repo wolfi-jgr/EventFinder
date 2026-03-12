@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -14,18 +15,22 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByCategory(String category);
     
     // Find upcoming events (events that haven't ended yet)
-    @Query("SELECT e FROM Event e WHERE e.endDateTime >= :now OR (e.endDateTime IS NULL AND e.startDateTime >= :now) ORDER BY e.startDateTime")
-    List<Event> findUpcomingEvents(@Param("now") LocalDateTime now);
+    @Query("SELECT e FROM Event e WHERE " +
+            "(e.endDate IS NOT NULL AND (e.endDate > :currentDate OR (e.endDate = :currentDate AND (e.endTime IS NULL OR e.endTime >= :currentTime)))) " +
+            "OR " +
+            "(e.endDate IS NULL AND (e.startDate > :currentDate OR (e.startDate = :currentDate AND (e.startTime IS NULL OR e.startTime >= :currentTime)))) " +
+            "ORDER BY e.startDate, e.startTime")
+    List<Event> findUpcomingEvents(@Param("currentDate") LocalDate currentDate, @Param("currentTime") LocalTime currentTime);
     
     // Find events within a date range
-    @Query("SELECT e FROM Event e WHERE e.startDateTime BETWEEN :startDate AND :endDate ORDER BY e.startDateTime")
-    List<Event> findEventsByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    @Query("SELECT e FROM Event e WHERE e.startDate BETWEEN :startDate AND :endDate ORDER BY e.startDate, e.startTime")
+    List<Event> findEventsByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     // Find events by location (simple string matching)
     List<Event> findByLocationContainingIgnoreCase(String location);
     
     // Find events near coordinates (basic bounding box query)
-    @Query("SELECT e FROM Event e WHERE e.latitude BETWEEN :minLat AND :maxLat AND e.longitude BETWEEN :minLon AND :maxLon ORDER BY e.startDateTime")
+    @Query("SELECT e FROM Event e WHERE e.latitude BETWEEN :minLat AND :maxLat AND e.longitude BETWEEN :minLon AND :maxLon ORDER BY e.startDate, e.startTime")
     List<Event> findEventsNearCoordinates(
         @Param("minLat") Double minLat,
         @Param("maxLat") Double maxLat,
@@ -34,10 +39,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     );
     
     // Find duplicate event by title, start date, and location (for deduplication during scraping)
-    @Query("SELECT e FROM Event e WHERE LOWER(e.title) = LOWER(:title) AND e.startDateTime = :startDateTime AND LOWER(e.location) = LOWER(:location)")
+    @Query("SELECT e FROM Event e WHERE LOWER(e.title) = LOWER(:title) " +
+            "AND e.startDate = :startDate " +
+            "AND ((e.startTime IS NULL AND :startTime IS NULL) OR e.startTime = :startTime) " +
+            "AND LOWER(e.location) = LOWER(:location)")
     List<Event> findDuplicateEvents(
         @Param("title") String title,
-        @Param("startDateTime") LocalDateTime startDateTime,
+        @Param("startDate") LocalDate startDate,
+        @Param("startTime") LocalTime startTime,
         @Param("location") String location
     );
     
