@@ -32,7 +32,7 @@ const youtubeLightColors = {
 
 const youtubeDarkColors = {
   textPrimary: "#f1f1f1",
-  textMuted: "#aaaaaa",
+  textMuted: "#f1f1f1",
   textSubtle: "#d7d7d7",
   textSuccess: "#34a853",
   textError: "#ea4335",
