@@ -72,12 +72,6 @@ public class DateParser {
         try {
             Matcher timeMatcher = Pattern.compile("(\\d{1,2}:\\d{2})").matcher(cleaned);
             String timePart = timeMatcher.find() ? timeMatcher.group(1) : null;
-            
-            // Try parsing German day names (e.g., "Montag, 19:30 Uhr")
-            LocalDateTime dayNameDate = parseGermanDayName(cleaned, timePart);
-            if (dayNameDate != null) {
-                return dayNameDate;
-            }
 
             LocalDateTime looseSlashDate = parseLooseSlashDate(cleaned, timePart);
             if (looseSlashDate != null) {
@@ -97,6 +91,12 @@ public class DateParser {
             LocalDateTime dayMonthAlpha = parseDayMonthAlpha(cleaned, timePart, parsedLocale);
             if (dayMonthAlpha != null) {
                 return dayMonthAlpha;
+            }
+
+            // Only use weekday-name fallback when there is no explicit calendar date in the text.
+            LocalDateTime dayNameDate = parseGermanDayName(cleaned, timePart);
+            if (dayNameDate != null) {
+                return dayNameDate;
             }
 
             Matcher namedDateAny = Pattern.compile("(\\d{1,2})\\.\\s*([\\p{L}]+)(?:\\s*(\\d{4}))?").matcher(cleaned);
@@ -230,6 +230,10 @@ public class DateParser {
      */
     public static LocalDateTime parseGermanDayName(String text, String timePart) {
         if (text == null) return null;
+
+        if (containsExplicitCalendarDate(text)) {
+            return null;
+        }
         
         String lower = text.toLowerCase()
             .replace(",", "")
@@ -268,6 +272,15 @@ public class DateParser {
         }
         
         return null;
+    }
+
+    private static boolean containsExplicitCalendarDate(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+
+        return Pattern.compile("\\d{1,2}[./]\\d{1,2}(?:[./]\\d{2,4})?").matcher(text).find()
+            || Pattern.compile("\\d{1,2}\\.\\s*[\\p{L}]+(?:\\s*\\d{4})?").matcher(text).find();
     }
     
     /**

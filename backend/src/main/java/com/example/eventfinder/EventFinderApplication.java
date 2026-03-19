@@ -4,9 +4,11 @@ import com.example.eventfinder.config.ScrapeRulesProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableConfigurationProperties(ScrapeRulesProperties.class)
+@EnableScheduling
 public class EventFinderApplication {
     public static void main(String[] args) {
         SpringApplication.run(EventFinderApplication.class, args);

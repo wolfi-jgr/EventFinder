@@ -68,6 +68,45 @@ public class HtmlStorage {
     }
 
     /**
+     * Delete cached HTML for today's file of a specific website.
+     */
+    public boolean deleteHtml(String website) {
+        String filename = generateFilename(website);
+        Path filepath = Paths.get(storagePath, filename);
+        try {
+            boolean deleted = Files.deleteIfExists(filepath);
+            if (deleted) {
+                logger.info("Deleted cached HTML for {} at {}", website, filepath.toAbsolutePath());
+            }
+            return deleted;
+        } catch (IOException e) {
+            logger.warn("Failed deleting cached HTML for {}", website, e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete all cached HTML files.
+     */
+    public int deleteAllHtml() {
+        int deleted = 0;
+        File[] files = listStoredHtml();
+        for (File file : files) {
+            try {
+                if (file.delete()) {
+                    deleted++;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed deleting cached file {}", file.getName(), e);
+            }
+        }
+        if (deleted > 0) {
+            logger.info("Deleted {} cached HTML files", deleted);
+        }
+        return deleted;
+    }
+
+    /**
      * Delete old HTML files (older than X days)
      */
     public void cleanup(int daysOld) {

@@ -300,8 +300,23 @@ public class ScrapeOrchestrationService {
      * Clear cached HTML for all or specific site
      */
     public void clearCache(String siteName) {
-        // still todo: Implement cache clearing in HtmlStorage
-        logger.info("Cache clearing requested for: {}", siteName != null ? siteName : "all sites");
+        if (siteName == null || siteName.isBlank()) {
+            int deleted = htmlStorage.deleteAllHtml();
+            logger.info("Cache cleared for all sites, deleted {} files", deleted);
+            return;
+        }
+
+        Optional<ScrapeRule> ruleOpt = resolveRuleBySiteName(siteName);
+        if (ruleOpt.isPresent()) {
+            ScrapeRule rule = ruleOpt.get();
+            boolean deleted = htmlStorage.deleteHtml(rule.getSiteName());
+            logger.info("Cache clear requested for {}. Deleted file: {}", rule.getSiteName(), deleted);
+            return;
+        }
+
+        // Fallback: try raw value as-is
+        boolean deleted = htmlStorage.deleteHtml(siteName);
+        logger.info("Cache clear requested for raw key {}. Deleted file: {}", siteName, deleted);
     }
 
     /**

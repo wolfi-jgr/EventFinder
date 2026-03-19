@@ -3,23 +3,22 @@ scrape-rules:
   rules:
     - site-name: theloft.at
       base-url: https://www.theloft.at/programm/
-      event-list-selector: a[href*="/programm/"]
-      event-item-selector: a[href*="/programm/"]
-      title-selector: a
-      date-selector: a
-      price-selector: a
-      venue-selector: a
-      link-selector: a
+      event-list-selector: .elementor-shortcode
+      event-item-selector: "a:has(.box-wrap)"
+      title-selector: .content-middle
+      date-selector: .content-left
+      price-selector: .content-left .preis
+      venue-selector: .content-right
+      link-selector: this
       date-format: "E. d.M.yyyy HH:mm"
       date-locale: de-DE
-      extraction-mode: REGEX
-      event-text-pattern: '([A-Za-z]{2}\.\s+\d{1,2}\.\d{1,2}\.\d{4}\s+\d{1,2}:\d{2}),?\s*(?:Eintritt:\s*)?(.*?)\s+([A-ZÄÖÜ][^\s]+(?:\s+[A-ZÄÖÜ][^\s]+)*?)\s+(Oben|Unten|Wohnzimmer|Keller|Dachboden)'
+      extraction-mode: CSS_SELECTOR
       category: Event
       organizer: The Loft
       enabled: true
       ai-enabled: true
       requires-detail-page-fetch: false
-      notes: "The Loft - WordPress site. Uses REST API /wp-json/wp/v2/posts if available. Falls back to REGEX extraction from link text."
+      notes: "The Loft - CSS_SELECTOR mode. Event items are <a> elements containing .box-wrap. Title in .content-middle, date+time in .content-left (.datum + .open span), price in .content-left .preis, venue in .content-right. link-selector 'this' because the item itself is the <a>."
 
     - site-name: grelleforelle.com
       base-url: https://grelleforelle.com/programm
@@ -55,7 +54,7 @@ scrape-rules:
       date-format: d. MMMM yyyy HH:mm
       date-locale: de-DE
       extraction-mode: CSS_SELECTOR
-      category: Culture
+      category: Party
       organizer: Das Werk
       enabled: true
       ai-enabled: true
@@ -97,7 +96,6 @@ scrape-rules:
       date-locale: de-AT
       extraction-mode: CSS_SELECTOR
       category: Culture
-      organizer: Falter
       enabled: true
       ai-enabled: false
       requires-detail-page-fetch: false

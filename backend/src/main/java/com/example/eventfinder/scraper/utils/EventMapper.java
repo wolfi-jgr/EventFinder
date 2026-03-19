@@ -25,7 +25,12 @@ public class EventMapper {
         event.setDescription(scraped.getDescription());
         event.setStartDateTime(scraped.getStartDateTime());
         event.setEndDateTime(scraped.getEndDateTime());
-        event.setLocation(scraped.getLocation());
+        String location = scraped.getLocation();
+        if (location == null || location.isBlank()) {
+            // No DB schema change needed: use rule organizer as static fallback location.
+            location = rule.getOrganizer();
+        }
+        event.setLocation(location);
         event.setLatitude(scraped.getLatitude());
         event.setLongitude(scraped.getLongitude());
         event.setCategory(resolveCategory(scraped));

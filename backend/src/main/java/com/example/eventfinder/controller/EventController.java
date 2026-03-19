@@ -134,4 +134,17 @@ public class EventController {
                 ));
     }
 
+    /**
+     * POST /api/events/cleanup - Trigger expiry cleanup manually
+     */
+    @PostMapping("/cleanup")
+    public ResponseEntity<?> cleanupExpiredEvents() {
+        int deletedCount = eventService.deleteExpiredEvents();
+        return ResponseEntity.ok()
+            .body(java.util.Map.of(
+                "message", "Expired events cleanup completed",
+                "deletedCount", deletedCount
+            ));
+    }
+
 }

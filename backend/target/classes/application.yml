@@ -26,6 +26,15 @@ spring:
 
 app:
   cors-origins: ${APP_CORS_ORIGINS:http://localhost:5173}
+  events:
+    # Categories treated as club nights (visible until next day 06:00 by backend rule)
+    club-categories: ${APP_EVENTS_CLUB_CATEGORIES:PARTY,CLUB}
+    cleanup:
+      # Daily cleanup time (Spring cron: second minute hour day month weekday)
+      cron: ${APP_EVENTS_CLEANUP_CRON:0 15 6 * * *}
+      zone: ${APP_EVENTS_CLEANUP_ZONE:Europe/Vienna}
+      # Keep expired events for N extra days before physical delete (0 = delete immediately when expired)
+      retention-days: ${APP_EVENTS_CLEANUP_RETENTION_DAYS:0}
 
 # Web Scraper Configuration
 scraper:

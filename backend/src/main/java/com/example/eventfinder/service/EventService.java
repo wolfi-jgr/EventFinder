@@ -2,28 +2,44 @@ package com.example.eventfinder.service;
 
 import com.example.eventfinder.model.Event;
 import com.example.eventfinder.repository.EventRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
     private final EventRepository eventRepository;
+    private final List<String> clubCategories;
+    private final int cleanupRetentionDays;
 
-    public EventService(EventRepository eventRepository) {
+    public EventService(
+        EventRepository eventRepository,
+        @Value("${app.events.club-categories:PARTY,CLUB}") String configuredClubCategories,
+        @Value("${app.events.cleanup.retention-days:0}") int cleanupRetentionDays
+    ) {
         this.eventRepository = eventRepository;
+        this.clubCategories = Arrays.stream(configuredClubCategories.split(","))
+            .map(String::trim)
+            .filter(value -> !value.isEmpty())
+            .map(String::toUpperCase)
+            .collect(Collectors.toList());
+        this.cleanupRetentionDays = Math.max(cleanupRetentionDays, 0);
     }
 
     /**
      * Get all events from the database
      */
     public List<Event> getAllEvents() {
-        return eventRepository.findAll();
+        return eventRepository.findVisibleEvents(LocalDateTime.now(), clubCategories);
     }
 
     /**
@@ -37,7 +53,16 @@ public class EventService {
      * Get upcoming events (events that haven't ended yet)
      */
     public List<Event> getUpcomingEvents() {
-        return eventRepository.findUpcomingEvents(LocalDate.now(), LocalTime.now());
+        return eventRepository.findVisibleEvents(LocalDateTime.now(), clubCategories);
+    }
+
+    /**
+     * Physically delete expired events to keep the table compact.
+     */
+    @Transactional
+    public int deleteExpiredEvents() {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(cleanupRetentionDays);
+        return eventRepository.deleteExpiredEventsBefore(cutoff, clubCategories);
     }
 
     /**

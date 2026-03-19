@@ -3,9 +3,11 @@ package com.example.eventfinder.repository;
 import com.example.eventfinder.model.Event;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -21,6 +23,29 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "(e.endDate IS NULL AND (e.startDate > :currentDate OR (e.startDate = :currentDate AND (e.startTime IS NULL OR e.startTime >= :currentTime)))) " +
             "ORDER BY e.startDate, e.startTime")
     List<Event> findUpcomingEvents(@Param("currentDate") LocalDate currentDate, @Param("currentTime") LocalTime currentTime);
+
+    // Visibility logic for frontend/API:
+    // - standard events stay visible until end of day
+    // - club events stay visible until next day at 06:00
+    @Query(value = "SELECT * FROM events e WHERE " +
+            "CASE " +
+            "WHEN e.end_date IS NOT NULL THEN (e.end_date + COALESCE(e.end_time, TIME '23:59:59')) " +
+            "WHEN UPPER(COALESCE(e.category, '')) IN (:clubCategories) THEN (e.start_date + TIME '06:00:00' + INTERVAL '1 day') " +
+            "ELSE (e.start_date + TIME '23:59:59') " +
+            "END >= :currentTs " +
+            "ORDER BY e.start_date, e.start_time", nativeQuery = true)
+    List<Event> findVisibleEvents(@Param("currentTs") LocalDateTime currentTs,
+                                  @Param("clubCategories") List<String> clubCategories);
+
+    @Modifying
+    @Query(value = "DELETE FROM events e WHERE " +
+            "CASE " +
+            "WHEN e.end_date IS NOT NULL THEN (e.end_date + COALESCE(e.end_time, TIME '23:59:59')) " +
+            "WHEN UPPER(COALESCE(e.category, '')) IN (:clubCategories) THEN (e.start_date + TIME '06:00:00' + INTERVAL '1 day') " +
+            "ELSE (e.start_date + TIME '23:59:59') " +
+            "END < :cutoffTs", nativeQuery = true)
+    int deleteExpiredEventsBefore(@Param("cutoffTs") LocalDateTime cutoffTs,
+                                  @Param("clubCategories") List<String> clubCategories);
     
     // Find events within a date range
     @Query("SELECT e FROM Event e WHERE e.startDate BETWEEN :startDate AND :endDate ORDER BY e.startDate, e.startTime")
