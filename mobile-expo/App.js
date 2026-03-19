@@ -8,11 +8,12 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
+  useColorScheme,
   View,
 } from "react-native";
 import { API_BASE } from "./src/config";
 import { fetchEvents, fetchHealth, fetchPlaces, getApiDebugState, runScraper } from "./src/api";
-import { APP_CONFIG, MOBILE_THEME } from "../shared/frontendConfig";
+import { APP_CONFIG, getMobileThemeByMode } from "../shared/frontendConfig";
 
 const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
 
@@ -30,13 +31,15 @@ const formatDateTime = (event) => {
   });
 };
 
-const TabButton = ({ active, label, onPress }) => (
+const TabButton = ({ active, label, onPress, styles }) => (
   <Pressable style={[styles.tab, active && styles.tabActive]} onPress={onPress}>
     <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
   </Pressable>
 );
 
 export default function App() {
+  const systemColorScheme = useColorScheme();
+  const [themeMode, setThemeMode] = useState(systemColorScheme === "light" ? "light" : "dark");
   const [events, setEvents] = useState([]);
   const [places, setPlaces] = useState([]);
   const [activeTab, setActiveTab] = useState("events");
@@ -44,7 +47,13 @@ export default function App() {
   const [message, setMessage] = useState("Tap Refresh to load data");
   const [apiDebug, setApiDebug] = useState(getApiDebugState());
 
+  const mobileTheme = useMemo(() => getMobileThemeByMode(themeMode), [themeMode]);
+  const styles = useMemo(() => createStyles(mobileTheme), [mobileTheme]);
   const apiHint = useMemo(() => `API: ${API_BASE}`, []);
+
+  const toggleThemeMode = () => {
+    setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -145,14 +154,25 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
 
-      <Text style={styles.header}>{APP_CONFIG.appName} Mobile</Text>
-      <Text style={styles.subheader}>Simple Expo test client ({APP_CONFIG.cityLabel})</Text>
-      <Text style={styles.apiHint}>{apiHint}</Text>
-      <Text style={styles.apiDebug}>Current base: {apiDebug.currentBase}</Text>
-      <Text style={styles.apiDebug}>Last attempt: {apiDebug.lastAttempt}</Text>
-      <Text style={styles.apiDebug}>Last success: {apiDebug.lastSuccess}</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          <Text style={styles.header}>{APP_CONFIG.appName} Mobile</Text>
+          <Pressable
+            style={styles.themeIconButton}
+            onPress={toggleThemeMode}
+            accessibilityLabel={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <Text style={styles.themeIconLabel}>{themeMode === "dark" ? "☀" : "🌙"}</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.subheader}>Simple Expo test client ({APP_CONFIG.cityLabel})</Text>
+        <Text style={styles.apiHint}>{apiHint}</Text>
+        <Text style={styles.apiDebug}>Current base: {apiDebug.currentBase}</Text>
+        <Text style={styles.apiDebug}>Last attempt: {apiDebug.lastAttempt}</Text>
+        <Text style={styles.apiDebug}>Last success: {apiDebug.lastSuccess}</Text>
+      </View>
 
       <View style={styles.actionsRow}>
         <Pressable style={styles.primaryButton} onPress={loadData} disabled={loading}>
@@ -172,11 +192,13 @@ export default function App() {
           active={activeTab === "events"}
           label={`Events (${events.length})`}
           onPress={() => setActiveTab("events")}
+          styles={styles}
         />
         <TabButton
           active={activeTab === "places"}
           label={`Places (${places.length})`}
           onPress={() => setActiveTab("places")}
+          styles={styles}
         />
       </View>
 
@@ -191,28 +213,63 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MOBILE_THEME.colors.background,
+    backgroundColor: theme.colors.background,
     paddingHorizontal: 16,
+    paddingTop: 6,
+  },
+  heroCard: {
+    borderWidth: 2,
+    borderColor: theme.colors.tabBorder,
+    borderRadius: 14,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 0,
+    shadowOffset: { width: 4, height: 4 },
+    elevation: 3,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
   },
   header: {
     fontSize: 26,
-    fontWeight: "700",
-    marginTop: 12,
+    fontWeight: "800",
+    marginTop: 2,
+    color: theme.colors.textPrimary,
+  },
+  themeIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.tabBorder,
+    backgroundColor: theme.colors.secondaryButton,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  themeIconLabel: {
+    fontSize: 18,
   },
   subheader: {
-    color: MOBILE_THEME.colors.textMuted,
+    color: theme.colors.textSecondary,
     marginTop: 4,
+    fontWeight: "600",
   },
   apiHint: {
-    color: MOBILE_THEME.colors.textMuted,
+    color: theme.colors.textMuted,
     marginTop: 6,
     fontSize: 12,
   },
   apiDebug: {
-    color: MOBILE_THEME.colors.textMuted,
+    color: theme.colors.textMuted,
     marginTop: 2,
     fontSize: 11,
   },
@@ -220,30 +277,51 @@ const styles = StyleSheet.create({
     marginTop: 14,
     flexDirection: "row",
     gap: 10,
+    flexWrap: "wrap",
   },
   primaryButton: {
-    backgroundColor: MOBILE_THEME.colors.primaryButton,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primaryButton,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.tabBorder,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 0,
+    shadowOffset: { width: 3, height: 3 },
+    elevation: 2,
   },
   primaryButtonLabel: {
-    color: MOBILE_THEME.colors.primaryButtonText,
-    fontWeight: "600",
+    color: theme.colors.primaryButtonText,
+    fontWeight: "700",
   },
   secondaryButton: {
-    backgroundColor: MOBILE_THEME.colors.secondaryButton,
-    borderRadius: 8,
+    backgroundColor: theme.colors.secondaryButton,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.tabBorder,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 0,
+    shadowOffset: { width: 2, height: 2 },
+    elevation: 1,
   },
   secondaryButtonLabel: {
-    color: MOBILE_THEME.colors.secondaryButtonText,
-    fontWeight: "600",
+    color: theme.colors.secondaryButtonText,
+    fontWeight: "700",
   },
   message: {
     marginTop: 12,
-    color: MOBILE_THEME.colors.textSecondary,
+    color: theme.colors.textSecondary,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.tabBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   loader: {
     marginTop: 8,
@@ -254,48 +332,59 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   tab: {
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: MOBILE_THEME.colors.tabBorder,
-    borderRadius: 8,
+    borderColor: theme.colors.tabBorder,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    flex: 1,
+    alignItems: "center",
   },
   tabActive: {
-    backgroundColor: MOBILE_THEME.colors.tabActive,
-    borderColor: MOBILE_THEME.colors.tabActive,
+    backgroundColor: theme.colors.tabActive,
+    borderColor: theme.colors.tabActive,
   },
   tabLabel: {
-    color: MOBILE_THEME.colors.textPrimary,
+    color: theme.colors.textPrimary,
     fontWeight: "600",
   },
   tabLabelActive: {
-    color: MOBILE_THEME.colors.tabActiveText,
+    color: theme.colors.tabActiveText,
   },
   listContent: {
     paddingVertical: 14,
     gap: 10,
   },
   card: {
-    backgroundColor: MOBILE_THEME.colors.card,
-    borderRadius: 10,
+    backgroundColor: theme.colors.card,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.tabBorder,
     padding: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 0,
+    shadowOffset: { width: 2, height: 2 },
+    elevation: 1,
   },
   title: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
   },
   detail: {
     marginTop: 4,
-    color: MOBILE_THEME.colors.textSecondary,
+    color: theme.colors.textSecondary,
   },
   link: {
     marginTop: 8,
-    color: MOBILE_THEME.colors.link,
+    color: theme.colors.link,
     fontWeight: "600",
   },
   empty: {
     textAlign: "center",
-    color: MOBILE_THEME.colors.textMuted,
+    color: theme.colors.textMuted,
     marginTop: 20,
   },
 });

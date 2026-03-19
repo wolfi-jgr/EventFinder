@@ -7,6 +7,35 @@ import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
 import { APP_CONFIG } from "@shared/frontendConfig";
 
+const ADMIN_PATH = "/admin";
+const THEME_STORAGE_KEY = "ef-theme-mode";
+
+const getThemeIcon = (mode) => (mode === "dark" ? "☀" : "🌙");
+
+const getCurrentPath = () => {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  const path = window.location.pathname || "/";
+  return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
+};
+
+const getInitialThemeMode = () => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const storedMode = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (storedMode === "light" || storedMode === "dark") {
+    return storedMode;
+  }
+
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+};
+
 // ── Category metadata matching the backend EventCategory enum ──────────────
 export const CATEGORY_INFO = {
   CONCERT:    { label: "Konzert",       icon: "🎵" },
@@ -48,13 +77,15 @@ const getEventTimestamp = (event) => {
 const DEFAULT_COORDS = APP_CONFIG.defaultCoords;
 
 export default function App() {
+  const [currentPath, setCurrentPath] = useState(getCurrentPath());
+  const [themeMode, setThemeMode] = useState(getInitialThemeMode());
   const [coords, setCoords] = useState(DEFAULT_COORDS);
   const [places, setPlaces] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("events"); // "places", "events", or "admin"
+  const [activeTab, setActiveTab] = useState("events");
   const [searchText, setSearchText] = useState("");
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
@@ -63,6 +94,9 @@ export default function App() {
   const [dateTo, setDateTo] = useState("");
   const [sortMode, setSortMode] = useState("date-asc");
   const [activeDatePreset, setActiveDatePreset] = useState(""); // "today"|"tomorrow"|"weekend"
+  const [showFilters, setShowFilters] = useState(false);
+
+  const isAdminRoute = currentPath === ADMIN_PATH;
 
   // ── Date-preset helpers ───────────────────────────────────────────────────
   const applyDatePreset = (preset) => {
@@ -87,7 +121,12 @@ export default function App() {
     } else if (preset === "weekend") {
       const dow = now.getDay(); // 0 = Sun, 6 = Sat
       let from, to;
-      if (dow === 6) {
+      if (dow === 5) {
+        // today is Friday
+        from = new Date(now);
+        to = new Date(now);
+        to.setDate(now.getDate() + 2);
+      } else if (dow === 6) {
         // today is Saturday
         from = new Date(now);
         to = new Date(now);
@@ -97,12 +136,12 @@ export default function App() {
         from = new Date(now);
         to = new Date(now);
       } else {
-        // weekday → next Sat + Sun
-        const daysToSat = 6 - dow;
+        // weekday → next Fri + Sat + Sun
+        const daysToFri = 5 - dow;
         from = new Date(now);
-        from.setDate(now.getDate() + daysToSat);
+        from.setDate(now.getDate() + daysToFri);
         to = new Date(from);
-        to.setDate(from.getDate() + 1);
+        to.setDate(from.getDate() + 2);
       }
       setDateFrom(formatDate(from));
       setDateTo(formatDate(to));
@@ -114,11 +153,38 @@ export default function App() {
   const handleDateFromChange = (val) => { setDateFrom(val); setActiveDatePreset(""); };
   const handleDateToChange   = (val) => { setDateTo(val);   setActiveDatePreset(""); };
 
-  // Load data on initial mount (without scraping)
   useEffect(() => {
-    applyFrontendTheme();
-    loadDataFromDatabase();
+    applyFrontendTheme(themeMode);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    }
+  }, [themeMode]);
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(getCurrentPath());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (!isAdminRoute) {
+      loadDataFromDatabase();
+    }
+  }, [isAdminRoute]);
+
+  const navigateTo = (path) => {
+    const nextPath = path || "/";
+    if (nextPath === currentPath) {
+      return;
+    }
+
+    window.history.pushState({}, "", nextPath);
+    setCurrentPath(nextPath);
+  };
+
+  const toggleThemeMode = () => {
+    setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   const loadDataFromDatabase = async () => {
     setLoading(true);
@@ -270,14 +336,80 @@ export default function App() {
     return grouped;
   };
 
+  if (isAdminRoute) {
+    return (
+      <div className="page page-admin">
+        <header className="header header-shell">
+          <div>
+            <p className="eyebrow">Administration</p>
+            <h1>{APP_CONFIG.appName}</h1>
+            <p>Scraping, rule sync and diagnostics live here, separate from the public event view.</p>
+          </div>
+          <nav className="top-nav" aria-label="Primary navigation">
+            <button className="nav-link" onClick={() => navigateTo("/")}>Public view</button>
+            <button
+              className="nav-link theme-toggle-inline"
+              onClick={toggleThemeMode}
+              aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {getThemeIcon(themeMode)}
+            </button>
+          </nav>
+        </header>
+
+        <section className="admin-layout">
+          <ScrapingPanel />
+          <ScrapedWebsites />
+        </section>
+
+        <button
+          className="theme-fab"
+          onClick={toggleThemeMode}
+          aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {getThemeIcon(themeMode)}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
-      <header className="header">
-        <h1>{APP_CONFIG.appName}</h1>
-        <p>Discover events and places in {APP_CONFIG.cityLabel}</p>
+      <header className="header header-shell">
+        <div>
+          <p className="eyebrow">Public</p>
+          <h1>{APP_CONFIG.appName}</h1>
+          <p>Discover events and places in {APP_CONFIG.cityLabel}</p>
+        </div>
+        <nav className="top-nav" aria-label="Primary navigation">
+          <button className="nav-link active" onClick={() => navigateTo("/")}>Events</button>
+          <button className="nav-link" onClick={() => navigateTo(ADMIN_PATH)}>Admin</button>
+          <button
+            className="nav-link theme-toggle-inline"
+            onClick={toggleThemeMode}
+            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {getThemeIcon(themeMode)}
+          </button>
+        </nav>
       </header>
 
-      <section className="controls">
+      <section className="controls-toggle-row">
+        <button
+          className="controls-toggle"
+          onClick={() => setShowFilters((prev) => !prev)}
+          aria-expanded={showFilters}
+          aria-controls="event-controls"
+        >
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
+      </section>
+
+      {showFilters && (
+      <section className="controls" id="event-controls">
         <div className="field">
           <label htmlFor="search">Search</label>
           <input
@@ -365,6 +497,7 @@ export default function App() {
           {loading ? loadingMessage || "Loading..." : "Refresh Data"}
         </button>
       </section>
+      )}
 
       {error && (
         <p className={error.startsWith("✓") ? "success" : "error"}>{error}</p>
@@ -435,12 +568,6 @@ export default function App() {
           onClick={() => setActiveTab("places")}
         >
           Places ({places.length})
-        </button>
-        <button
-          className={activeTab === "admin" ? "active" : ""}
-          onClick={() => setActiveTab("admin")}
-        >
-          Admin
         </button>
       </section>
 
@@ -515,14 +642,16 @@ export default function App() {
             )}
           </>
         )}
-
-        {activeTab === "admin" && (
-          <>
-            <ScrapingPanel />
-            <ScrapedWebsites />
-          </>
-        )}
       </section>
+
+      <button
+        className="theme-fab"
+        onClick={toggleThemeMode}
+        aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        {getThemeIcon(themeMode)}
+      </button>
     </div>
   );
 }

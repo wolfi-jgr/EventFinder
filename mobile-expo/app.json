@@ -4,10 +4,10 @@
     "slug": "eventfinder-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#fff7b2"
     },
     "updates": {
       "fallbackToCacheTimeout": 0

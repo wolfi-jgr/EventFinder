@@ -4,11 +4,14 @@
   border-radius: 8px;
   padding: 1rem;
   min-width: 300px;
+  width: min(300px, calc(100vw - 9rem));
+  max-width: calc(100vw - 9rem);
   flex-shrink: 0;
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .event-card:hover {
@@ -32,6 +35,7 @@
   color: var(--text-primary, #212121);
   flex: 1;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .event-card-badge {
@@ -53,12 +57,20 @@
 .event-card-venue,
 .event-card-price {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.85rem;
   color: var(--text-secondary, #757575);
   margin-bottom: 0.5rem;
   line-height: 1.4;
+  min-width: 0;
+}
+
+.event-card-date span:last-child,
+.event-card-venue span:last-child,
+.event-card-price span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .calendar-icon,
@@ -91,4 +103,20 @@
 .event-card-link:hover {
   color: var(--secondary-color, #FF9800);
   text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .event-card {
+    min-width: min(280px, calc(100vw - 7.5rem));
+    width: min(280px, calc(100vw - 7.5rem));
+    max-width: calc(100vw - 7.5rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .event-card {
+    min-width: min(250px, calc(100vw - 6.5rem));
+    width: min(250px, calc(100vw - 6.5rem));
+    max-width: calc(100vw - 6.5rem);
+  }
 }

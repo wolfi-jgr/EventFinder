@@ -14,44 +14,91 @@ export const API_CONFIG = {
   androidEmulatorHost: "10.0.2.2",
 };
 
-const commonColors = {
-  textPrimary: "#0d0d0d",
-  textMuted: "#666",
-  textSubtle: "#555",
-  textSuccess: "#2e7d32",
-  textError: "#b00020",
-  backgroundPage: "#f4f0ea",
-  backgroundPageAccent: "#ffe6c4",
+const youtubeLightColors = {
+  textPrimary: "#14213d",
+  textMuted: "#5f6b82",
+  textSubtle: "#3b4a63",
+  textSuccess: "#1b8a5a",
+  textError: "#d93025",
+  backgroundPage: "#f9f9f9",
+  backgroundPageAccent: "#ececec",
   backgroundCard: "#ffffff",
-  borderSoft: "#ddd",
-  accent: "#ff8a3d",
-  accentHover: "#ff7020",
-  accentSoft: "#ffe6c4",
-  accentSoftHover: "#ffd9a6",
+  borderSoft: "#e5e5e5",
+  accent: "#ff0000",
+  accentHover: "#cc0000",
+  accentSoft: "#ffe5e5",
+  accentSoftHover: "#ffd1d1",
+};
+
+const youtubeDarkColors = {
+  textPrimary: "#f1f1f1",
+  textMuted: "#aaaaaa",
+  textSubtle: "#d7d7d7",
+  textSuccess: "#34a853",
+  textError: "#ea4335",
+  backgroundPage: "#0f0f0f",
+  backgroundPageAccent: "#1a1a1a",
+  backgroundCard: "#1f1f1f",
+  borderSoft: "#2f2f2f",
+  accent: "#ff3d3d",
+  accentHover: "#ff6969",
+  accentSoft: "#3a1d1d",
+  accentSoftHover: "#512424",
 };
 
 export const FRONTEND_THEME = {
   fontFamily: '"Space Grotesk", "Segoe UI", sans-serif',
-  colors: commonColors,
+  colors: youtubeLightColors,
 };
 
-export const MOBILE_THEME = {
+export const FRONTEND_THEME_DARK = {
+  fontFamily: '"Space Grotesk", "Segoe UI", sans-serif',
+  colors: youtubeDarkColors,
+};
+
+export const MOBILE_THEME_LIGHT = {
   colors: {
-    background: "#f7f7f7",
+    background: "#f9f9f9",
     card: "#ffffff",
-    textPrimary: "#111827",
-    textSecondary: "#374151",
-    textMuted: "#6b7280",
-    primaryButton: "#1d4ed8",
+    textPrimary: "#181818",
+    textSecondary: "#3c4043",
+    textMuted: "#60656b",
+    primaryButton: "#ff0000",
     primaryButtonText: "#ffffff",
-    secondaryButton: "#e5e7eb",
-    secondaryButtonText: "#111827",
-    tabBorder: "#d1d5db",
-    tabActive: "#111827",
+    secondaryButton: "#ececec",
+    secondaryButtonText: "#181818",
+    tabBorder: "#dedede",
+    tabActive: "#181818",
     tabActiveText: "#ffffff",
-    link: "#2563eb",
+    link: "#cc0000",
   },
 };
+
+export const MOBILE_THEME_DARK = {
+  colors: {
+    background: "#0f0f0f",
+    card: "#1f1f1f",
+    textPrimary: "#f1f1f1",
+    textSecondary: "#d7d7d7",
+    textMuted: "#aaaaaa",
+    primaryButton: "#ff3d3d",
+    primaryButtonText: "#ffffff",
+    secondaryButton: "#2f2f2f",
+    secondaryButtonText: "#f1f1f1",
+    tabBorder: "#3a3a3a",
+    tabActive: "#ff3d3d",
+    tabActiveText: "#ffffff",
+    link: "#ff6969",
+  },
+};
+
+export const MOBILE_THEME = MOBILE_THEME_DARK;
+
+export const getMobileThemeByMode = (mode = "dark") =>
+  mode === "light" ? MOBILE_THEME_LIGHT : MOBILE_THEME_DARK;
+
+export const getFrontendThemeByMode = (mode = "light") =>
+  mode === "dark" ? FRONTEND_THEME_DARK : FRONTEND_THEME;
 
 export const toFrontendCssVariables = (theme = FRONTEND_THEME) => ({
   "--ef-font-family": theme.fontFamily,

@@ -3,6 +3,8 @@
   padding: 2rem;
   border-radius: 1rem;
   margin-top: 2rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .scraping-panel h2 {
@@ -42,6 +44,7 @@
   border-radius: 0.5rem;
   margin-bottom: 1rem;
   border-left: 4px solid #0984e3;
+  overflow-wrap: anywhere;
 }
 
 .scraping-result {
@@ -114,6 +117,7 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .source-info strong {
@@ -150,6 +154,7 @@
   font-size: 0.9rem;
   color: #666;
   margin-top: 0.5rem;
+  overflow-wrap: anywhere;
 }
 
 .source-details > div {
@@ -164,6 +169,9 @@
 
 .source-actions {
   margin-top: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .source-actions button {
@@ -175,8 +183,20 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  max-width: 100%;
 }
 
 .source-actions button:hover {
   background: #54a3ff;
+}
+
+@media (max-width: 640px) {
+  .actions button,
+  .source-actions button {
+    width: 100%;
+  }
+
+  .result-stats {
+    grid-template-columns: 1fr;
+  }
 }
