@@ -83,7 +83,7 @@ public abstract class BaseWebScraper {
                 
                 Document doc = connection.get();
                 
-                logger.info("[{}] Successfully fetched: {}", getScraperName(), url);
+                logger.info("[{}] Successfully fetched: {} (data from: {} )", getScraperName(), url, doc.location());
                 return doc;
                 
             } catch (IOException e) {

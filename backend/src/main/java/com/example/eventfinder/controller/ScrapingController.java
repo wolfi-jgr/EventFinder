@@ -111,10 +111,11 @@ public class ScrapingController {
     /**
      * DELETE /api/scraping/cache/{siteName} - Clear cached HTML for a site
      */
-    @DeleteMapping("/cache/{siteName}")
-    public ResponseEntity<Map<String, String>> clearCache(@PathVariable String siteName) {
-        orchestrationService.clearCache(siteName);
-        return ResponseEntity.ok(Map.of("message", "Cache cleared for " + siteName));
+    @DeleteMapping("/cache")
+    public ResponseEntity<?> clearCache(@RequestParam String siteName){
+        String decodedSiteName = URLDecoder.decode(siteName, StandardCharsets.UTF_8);
+        orchestrationService.clearCache(decodedSiteName);
+        return ResponseEntity.ok(Map.of("message", "Cache cleared for " + decodedSiteName));
     }
 
     /**

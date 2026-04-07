@@ -92,8 +92,8 @@ export default function ScrapingPanel() {
 
   const clearCache = async (siteName) => {
     try {
-      await fetch(`${API_BASE}/api/scraping/cache/${encodeURIComponent(siteName)}`, {
-        method: "DELETE",
+      await fetch(`${API_BASE}/api/scraping/cache?siteName=${encodeURIComponent(siteName)}`, {
+      method: "DELETE",
       });
       setMessage(`Cache cleared for ${siteName}`);
       await loadSites();
