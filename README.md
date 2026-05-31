@@ -37,3 +37,7 @@ Frontend:
 - Vite web app consumes this via alias `@shared/frontendConfig`.
 - Expo app consumes this via `../shared/frontendConfig` (enabled by `mobile-expo/metro.config.js`).
 - Update colors/app defaults once in `shared/frontendConfig.js` to keep both clients aligned.
+
+
+## Transition to PWA deployment
+- in progress

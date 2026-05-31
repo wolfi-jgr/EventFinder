@@ -13,3 +13,5 @@
 -> Testing
 -> Documentation
 -> Production Readiness (Environment configuration (dev/prod), Logging strategy, Monitoring/health checks, CI/CD pipeline)
+
+PWA implementation
