@@ -5,7 +5,14 @@ spring:
   config:
     import: optional:classpath:scrape-rules.yml
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/eventfinder}
+    # Prefer an explicit Spring JDBC URL set in `SPRING_DATASOURCE_URL`.
+    # If you deploy to platforms that provide a JDBC URL, set it there.
+    # Optionally `JDBC_DATABASE_URL` can be used as a secondary fallback.
+    # NOTE: If your provider supplies a DATABASE_URL like
+    # "postgres://user:pass@host:5432/db" convert it to a JDBC URL by
+    # replacing the scheme with "jdbc:postgresql://" before setting it
+    # in `SPRING_DATASOURCE_URL` (or set `JDBC_DATABASE_URL` accordingly).
+    url: ${SPRING_DATASOURCE_URL:${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/eventfinder}}
     username: ${SPRING_DATASOURCE_USERNAME:eventfinder}
     password: ${SPRING_DATASOURCE_PASSWORD:eventfinder}
   jpa:

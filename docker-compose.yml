@@ -5,7 +5,9 @@ services:
     environment:
       POSTGRES_DB: eventfinder
       POSTGRES_USER: eventfinder
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error: POSTGRES_PASSWORD not set}
+      # Fallback to a local default password for developer convenience.
+      # In CI/production set `POSTGRES_PASSWORD` to a strong secret.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eventfinder}
     ports:
       - "5432:5432"
     volumes:
@@ -23,9 +25,11 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/eventfinder
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:eventfinder}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?error: SPRING_DATASOURCE_PASSWORD not set}
+      # Use the linked `db` service in local compose. These values fall back
+      # to sensible local defaults when environment variables are not set.
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/eventfinder}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-eventfinder}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-eventfinder}
       APP_CORS_ORIGINS: "*"
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
       SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
@@ -45,9 +49,10 @@ services:
     volumes:
       - ./:/workspace
     environment:
-      # Local development - uses localhost
-      # The config.js will automatically handle API calls
-      VITE_API_BASE: http://localhost:8080
+      # Local development - uses localhost. If `VITE_API_BASE` is provided it
+      # will be used (e.g. in CI); otherwise frontend dev connects to
+      # `http://localhost:8080` where the backend is exposed by compose.
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8080}
     ports:
       - "5173:5173"
     command: sh -c "cd /workspace/frontend && npm install && npm run dev -- --host 0.0.0.0"

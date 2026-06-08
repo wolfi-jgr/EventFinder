@@ -5,7 +5,7 @@ import LocationSlider from "./components/LocationSlider";
 import ScrapedWebsites from "./components/ScrapedWebsites";
 import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
-import { APP_CONFIG } from "@shared/frontendConfig";
+import { APP_CONFIG } from "./config";
 
 const ADMIN_PATH = "/admin";
 const THEME_STORAGE_KEY = "ef-theme-mode";

@@ -1,4 +1,4 @@
-import { getFrontendThemeByMode, toFrontendCssVariables } from "@shared/frontendConfig";
+import { getFrontendThemeByMode, toFrontendCssVariables } from "./config";
 
 export const applyFrontendTheme = (mode = "light") => {
   if (typeof document === "undefined") {
