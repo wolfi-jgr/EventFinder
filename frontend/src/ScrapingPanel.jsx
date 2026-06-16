@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./ScrapingPanel.css";
 import { API_BASE } from "./config";
 
-export default function ScrapingPanel() {
+export default function ScrapingPanel({ authOptions = {} }) {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -15,7 +15,9 @@ export default function ScrapingPanel() {
   const loadSites = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/status`);
+      const response = await fetch(`${API_BASE}/api/scraping/rules/status`, {
+        ...authOptions,
+      });
       if (response.ok) {
         const data = await response.json();
         setSites(data);
@@ -34,6 +36,7 @@ export default function ScrapingPanel() {
     try {
       const response = await fetch(`${API_BASE}/api/scraping/rules/run`, {
         method: "POST",
+        ...authOptions,
       });
       const result = await response.json();
       setScrapingResult(result);
@@ -72,6 +75,7 @@ export default function ScrapingPanel() {
       console.log(`Initiating scraping for site: ${siteName}`);
       const response = await fetch(`${API_BASE}/api/scraping/rules/site?siteName=${encodeURIComponent(siteName)}`, {
         method: "POST",
+        ...authOptions,
       });
       const result = await response.json();
       
@@ -93,7 +97,8 @@ export default function ScrapingPanel() {
   const clearCache = async (siteName) => {
     try {
       await fetch(`${API_BASE}/api/scraping/cache?siteName=${encodeURIComponent(siteName)}`, {
-      method: "DELETE",
+        method: "DELETE",
+        ...authOptions,
       });
       setMessage(`Cache cleared for ${siteName}`);
       await loadSites();
@@ -116,7 +121,7 @@ export default function ScrapingPanel() {
     try {
       const response = await fetch(
         `${API_BASE}/api/scraping/events/site?siteName=${encodeURIComponent(siteName)}`,
-        { method: "DELETE" }
+        { method: "DELETE", ...authOptions }
       );
       const result = await response.json();
 
@@ -140,6 +145,7 @@ export default function ScrapingPanel() {
     try {
       const response = await fetch(`${API_BASE}/api/scraping/rules/sync`, {
         method: "POST",
+        ...authOptions,
       });
       const result = await response.json();
 

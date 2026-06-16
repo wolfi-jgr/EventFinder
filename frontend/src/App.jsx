@@ -6,6 +6,8 @@ import ScrapedWebsites from "./components/ScrapedWebsites";
 import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
 import { APP_CONFIG } from "./config";
+import { useCallback } from "react";
+
 
 const ADMIN_PATH = "/admin";
 const THEME_STORAGE_KEY = "ef-theme-mode";
@@ -38,17 +40,17 @@ const getInitialThemeMode = () => {
 
 // ── Category metadata matching the backend EventCategory enum ──────────────
 export const CATEGORY_INFO = {
-  CONCERT:    { label: "Konzert",       icon: "🎵" },
-  PARTY:      { label: "Party",         icon: "🎉" },
-  THEATER:    { label: "Theater",       icon: "🎭" },
-  EXHIBITION: { label: "Ausstellung",   icon: "🖼️" },
-  SPORTS:     { label: "Sport",         icon: "⚽" },
-  FOOD:       { label: "Food",          icon: "🍕" },
-  BUSINESS:   { label: "Business",      icon: "💼" },
-  WORKSHOP:   { label: "Workshop",      icon: "🔧" },
-  FAMILY:     { label: "Familie",       icon: "👨‍👩‍👧" },
-  EVENT:      { label: "Veranstaltung", icon: "📅" },
-  OTHER:      { label: "Sonstiges",     icon: "✨" },
+  CONCERT: { label: "Konzert", icon: "🎵" },
+  PARTY: { label: "Party", icon: "🎉" },
+  THEATER: { label: "Theater", icon: "🎭" },
+  EXHIBITION: { label: "Ausstellung", icon: "🖼️" },
+  SPORTS: { label: "Sport", icon: "⚽" },
+  FOOD: { label: "Food", icon: "🍕" },
+  BUSINESS: { label: "Business", icon: "💼" },
+  WORKSHOP: { label: "Workshop", icon: "🔧" },
+  FAMILY: { label: "Familie", icon: "👨‍👩‍👧" },
+  EVENT: { label: "Veranstaltung", icon: "📅" },
+  OTHER: { label: "Sonstiges", icon: "✨" },
 };
 
 const formatDate = (d) => d.toISOString().slice(0, 10);
@@ -95,8 +97,16 @@ export default function App() {
   const [sortMode, setSortMode] = useState("date-asc");
   const [activeDatePreset, setActiveDatePreset] = useState(""); // "today"|"tomorrow"|"weekend"
   const [showFilters, setShowFilters] = useState(false);
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const featuredCategories = ["CONCERT", "PARTY", "EVENT"];
 
-  const isAdminRoute = currentPath === ADMIN_PATH;
+  const [adminLoggedIn, setAdminLoggedIn] = useState(null); // null = unknown, true/false = known status
+
+  const isAdminRoute = currentPath.startsWith(ADMIN_PATH);
+
+  const authOptions = { credentials: "include" };
 
   // ── Date-preset helpers ───────────────────────────────────────────────────
   const applyDatePreset = (preset) => {
@@ -151,7 +161,7 @@ export default function App() {
 
   // Clear active preset label when user types a date manually
   const handleDateFromChange = (val) => { setDateFrom(val); setActiveDatePreset(""); };
-  const handleDateToChange   = (val) => { setDateTo(val);   setActiveDatePreset(""); };
+  const handleDateToChange = (val) => { setDateTo(val); setActiveDatePreset(""); };
 
   useEffect(() => {
     applyFrontendTheme(themeMode);
@@ -165,6 +175,94 @@ export default function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/status`, {
+        credentials: "include",
+      });
+
+      const data = await response.json().catch(() => null);
+      const ok = data?.authenticated === true;
+
+      setAdminLoggedIn((prev) => {
+        // change this!!
+        if (prev === true && ok === false) {
+          return true;
+        }
+        return ok;
+      });
+
+      return ok;
+    } catch {
+      setAdminLoggedIn(false);
+      return false;
+    }
+  }, []);
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError("");
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          username: adminUsername,
+          password: adminPassword,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+
+
+      // IMPORTANT: don't rely blindly on backend flag
+      // instead VERIFY session after login
+
+      // await handlePostLogin();
+      //////////////////////////////
+
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      setAdminLoggedIn(true);
+      navigateTo(ADMIN_PATH);
+      setTimeout(checkAdminStatus, 500);
+
+      setAdminUsername("");
+      setAdminPassword("");
+    } catch (err) {
+      setLoginError(err.message || "Login failed");
+      setAdminLoggedIn(false);
+    }
+
+  };
+
+
+
+  const logoutAdmin = async () => {
+    try {
+      await fetch(`${API_BASE}/api/admin/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore logaout failure.
+    }
+
+    setAdminLoggedIn(false);
+    setAdminUsername("");
+    setAdminPassword("");
+    navigateTo("/");
+  };
+
 
   useEffect(() => {
     if (!isAdminRoute) {
@@ -181,6 +279,7 @@ export default function App() {
     window.history.pushState({}, "", nextPath);
     setCurrentPath(nextPath);
   };
+
 
   const toggleThemeMode = () => {
     setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
@@ -343,34 +442,59 @@ export default function App() {
           <div>
             <p className="eyebrow">Administration</p>
             <h1>{APP_CONFIG.appName}</h1>
-            <p>Scraping, rule sync and diagnostics live here, separate from the public event view.</p>
+            <p>Scraping, rule sync and diagnostics live here.</p>
           </div>
-          <nav className="top-nav" aria-label="Primary navigation">
-            <button className="nav-link" onClick={() => navigateTo("/")}>Public view</button>
-            <button
-              className="nav-link theme-toggle-inline"
-              onClick={toggleThemeMode}
-              aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {getThemeIcon(themeMode)}
-            </button>
-          </nav>
         </header>
 
-        <section className="admin-layout">
-          <ScrapingPanel />
-          <ScrapedWebsites />
-        </section>
+        {/*AUTH STILL CHECKING */}
+        {adminLoggedIn === null && (
+          <section className="login-panel">
+            <h2>Checking session...</h2>
+            <p>Please wait</p>
+          </section>
+        )}
 
-        <button
-          className="theme-fab"
-          onClick={toggleThemeMode}
-          aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {getThemeIcon(themeMode)}
-        </button>
+        {/*NOT AUTHENTICATED */}
+        {adminLoggedIn === false && (
+          <section className="login-panel">
+            <h2>Admin Login</h2>
+
+            <form onSubmit={handleLoginSubmit}>
+              <input
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                placeholder="Username"
+                autoComplete="username"
+              />
+
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Password"
+                autoComplete="current-password"
+              />
+
+              {loginError && <p className="error">{loginError}</p>}
+
+              <button type="submit">Login</button>
+            </form>
+          </section>
+        )}
+
+        {/*AUTHENTICATED */}
+        {adminLoggedIn === true && (
+          <>
+            <section className="admin-layout">
+              <ScrapingPanel authOptions={authOptions} />
+              <ScrapedWebsites authOptions={authOptions} />
+            </section>
+
+            <button onClick={logoutAdmin} className="login-logout">
+              Logout
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -409,94 +533,99 @@ export default function App() {
       </section>
 
       {showFilters && (
-      <section className="controls" id="event-controls">
-        <div className="field">
-          <label htmlFor="search">Search</label>
-          <input
-            id="search"
-            type="text"
-            placeholder="Artist, venue, genre..."
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="source">Source</label>
-          <select
-            id="source"
-            value={selectedSource}
-            onChange={(event) => setSelectedSource(event.target.value)}
-          >
-            <option value="all">All sources</option>
-            {uniqueSources.map((source) => (
-              <option key={source} value={source}>{source}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="location">Location</label>
-          <select
-            id="location"
-            value={selectedLocation}
-            onChange={(event) => setSelectedLocation(event.target.value)}
-          >
-            <option value="all">All locations</option>
-            {uniqueLocations.map((location) => (
-              <option key={location} value={location}>{location}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="category">Genre</label>
-          <select
-            id="category"
-            value={selectedCategory}
-            onChange={(event) => setSelectedCategory(event.target.value)}
-          >
-            <option value="all">All genres</option>
-            {uniqueCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {CATEGORY_INFO[cat]
-                  ? `${CATEGORY_INFO[cat].icon} ${CATEGORY_INFO[cat].label}`
-                  : cat}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="dateFrom">From</label>
-          <input
-            id="dateFrom"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => handleDateFromChange(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dateTo">To</label>
-          <input
-            id="dateTo"
-            type="date"
-            value={dateTo}
-            onChange={(e) => handleDateToChange(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="sort">Sort</label>
-          <select
-            id="sort"
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value)}
-          >
-            <option value="date-asc">Date (earliest)</option>
-            <option value="date-desc">Date (latest)</option>
-            <option value="title">Title (A-Z)</option>
-          </select>
-        </div>
-        <button onClick={fetchData} disabled={loading}>
-          {loading ? loadingMessage || "Loading..." : "Refresh Data"}
-        </button>
-      </section>
+        <section className="controls" id="event-controls">
+          <div className="field">
+            <label htmlFor="search">Search</label>
+            <input
+              id="search"
+              type="text"
+              placeholder="Artist, venue, genre..."
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="source">Source</label>
+            <select
+              id="source"
+              value={selectedSource}
+              onChange={(event) => setSelectedSource(event.target.value)}
+            >
+              <option value="all">All sources</option>
+              {uniqueSources.map((source) => (
+                <option key={source} value={source}>{source}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="location">Location</label>
+            <select
+              id="location"
+              value={selectedLocation}
+              onChange={(event) => setSelectedLocation(event.target.value)}
+            >
+              <option value="all">All locations</option>
+              {uniqueLocations.map((location) => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="category">Genre</label>
+
+
+            <select
+              id="category"
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+            >
+              <option value="all">All genres</option>
+
+              {uniqueCategories
+                .filter((cat) => featuredCategories.includes(cat))
+                .map((cat) => (
+                  <option key={cat} value={cat}>
+                    {CATEGORY_INFO[cat]
+                      ? `${CATEGORY_INFO[cat].icon} ${CATEGORY_INFO[cat].label}`
+                      : cat}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="dateFrom">From</label>
+            <input
+              id="dateFrom"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => handleDateFromChange(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="dateTo">To</label>
+            <input
+              id="dateTo"
+              type="date"
+              value={dateTo}
+              onChange={(e) => handleDateToChange(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="sort">Sort</label>
+            <select
+              id="sort"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value)}
+            >
+              <option value="date-asc">Date (earliest)</option>
+              <option value="date-desc">Date (latest)</option>
+              <option value="title">Title (A-Z)</option>
+            </select>
+          </div>
+          <button onClick={fetchData} disabled={loading}>
+            {loading ? loadingMessage || "Loading..." : "Refresh Data"}
+          </button>
+        </section>
       )}
 
       {error && (
@@ -509,9 +638,9 @@ export default function App() {
           <span className="filter-group-label">Wann</span>
           <div className="chip-row">
             {[
-              { id: "today",    label: "Heute" },
+              { id: "today", label: "Heute" },
               { id: "tomorrow", label: "Morgen" },
-              { id: "weekend",  label: "Wochenende" },
+              { id: "weekend", label: "Wochenende" },
             ].map(({ id, label }) => (
               <button
                 key={id}
@@ -535,7 +664,7 @@ export default function App() {
         <div className="filter-group">
           <span className="filter-group-label">Genre</span>
           <div className="chip-row">
-            {Object.entries(CATEGORY_INFO).map(([key, { label, icon }]) => (
+            {Object.entries(CATEGORY_INFO).filter(([key]) => featuredCategories.includes(key)).map(([key, { label, icon }]) => (
               <button
                 key={key}
                 className={`chip-btn category-chip${selectedCategory === key ? " active" : ""}`}

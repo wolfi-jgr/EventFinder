@@ -102,6 +102,19 @@ CREATE TABLE scrape_rules (
     notes VARCHAR(2000)
 );
 
+-- Create users table for admin access
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'ADMIN',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed admin user (change password in production)
+INSERT INTO users (username, password_hash, role)
+VALUES ('admin', '$2b$12$f6vEPq8dpS4S0e10bN4.W.ApqlGabNIL6UgLynGlBHOEhldEkfs5y', 'ADMIN');
+
 -- Create event_tags table for many-to-many tag relationship
 CREATE TABLE event_tags (
     event_id BIGINT NOT NULL,

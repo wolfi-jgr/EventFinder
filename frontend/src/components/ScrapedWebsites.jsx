@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { API_BASE } from "../config";
 import "./ScrapedWebsites.css";
 
-export default function ScrapedWebsites() {
+export default function ScrapedWebsites({ authOptions = {} }) {
   const [websites, setWebsites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,7 +15,9 @@ export default function ScrapedWebsites() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/status`);
+      const response = await fetch(`${API_BASE}/api/scraping/rules/status`, {
+        ...authOptions,
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch website status: ${response.status}`);
       }

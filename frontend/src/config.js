@@ -109,7 +109,7 @@ export const MOBILE_THEME_DARK = {
     primaryButton: "#ff3d3d",
     primaryButtonText: "#ffffff",
     secondaryButton: "#2f2f2f",
-    secondaryButtonText: "#f1f1f1",
+    secondaryButtonText: "#841919",
     tabBorder: "#3a3a3a",
     tabActive: "#ff3d3d",
     tabActiveText: "#ffffff",

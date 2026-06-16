@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import com.example.eventfinder.web.AdminAuthInterceptor;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -26,4 +28,11 @@ public class WebConfig implements WebMvcConfigurer {
                     .allowCredentials(true);
         }
     }
+
+        @Override
+        public void addInterceptors(InterceptorRegistry registry) {
+            // Protect scraping-related endpoints and other admin actions
+            registry.addInterceptor(new AdminAuthInterceptor())
+                    .addPathPatterns("/api/scraping/**");
+        }
 }
