@@ -7,6 +7,7 @@ import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
 import { APP_CONFIG } from "./config";
 import { useCallback } from "react";
+import { setToken, removeToken, getToken, jsonFetch } from "./api.js";
 
 
 const ADMIN_PATH = "/admin";
@@ -106,7 +107,8 @@ export default function App() {
 
   const isAdminRoute = currentPath.startsWith(ADMIN_PATH);
 
-  const authOptions = { credentials: "include" };
+  const authOptions = {}; // JWT token now added automatically via api.js
+
 
   // ── Date-preset helpers ───────────────────────────────────────────────────
   const applyDatePreset = (preset) => {
@@ -178,8 +180,16 @@ export default function App() {
 
   const checkAdminStatus = useCallback(async () => {
     try {
+      const token = getToken();
+      if (!token) {
+        setAdminLoggedIn(false);
+        return false;
+      }
+
       const response = await fetch(`${API_BASE}/api/admin/status`, {
-        credentials: "include",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
       });
 
       const data = await response.json().catch(() => null);
@@ -207,7 +217,6 @@ export default function App() {
       const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           username: adminUsername,
           password: adminPassword,
@@ -218,6 +227,12 @@ export default function App() {
 
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
+      }
+
+      // Store JWT token in localStorage
+      if (data.token) {
+        setToken(data.token);
+        //console.log("[Auth] token stored:", data.token ? `${data.token.slice(0,12)}...` : null);
       }
 
       const isAdmin = await checkAdminStatus();
@@ -239,12 +254,16 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/api/admin/logout`, {
         method: "POST",
-        credentials: "include",
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
       });
     } catch {
-      // ignore logaout failure.
+      // ignore logout failure
     }
 
+    // Remove token from localStorage
+    removeToken();
     setAdminLoggedIn(false);
     setAdminUsername("");
     setAdminPassword("");
@@ -311,15 +330,7 @@ export default function App() {
 
     try {
       // Step 1: Run rule-based scraper for all configured websites
-      const scrapingResponse = await fetch(`${API_BASE}/api/scraping/rules/run`, {
-        method: "POST",
-      });
-
-      if (!scrapingResponse.ok) {
-        throw new Error(`Scraping failed with ${scrapingResponse.status}`);
-      }
-
-      const scrapingResult = await scrapingResponse.json();
+      const scrapingResult = await jsonFetch(`/api/scraping/rules/run`, { method: "POST" });
       console.log("Scraping completed:", scrapingResult);
 
       // Step 2: Load fresh data from database

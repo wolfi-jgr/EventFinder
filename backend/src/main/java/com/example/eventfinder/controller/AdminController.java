@@ -2,12 +2,12 @@ package com.example.eventfinder.controller;
 
 import com.example.eventfinder.model.User;
 import com.example.eventfinder.repository.UserRepository;
+import com.example.eventfinder.security.JwtTokenProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,13 +16,15 @@ import java.util.Optional;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public AdminController(UserRepository userRepository) {
+    public AdminController(UserRepository userRepository, JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpServletRequest request) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         String password = body.get("password");
 
@@ -42,26 +44,26 @@ public class AdminController {
             return ResponseEntity.status(401).body(Map.of("error", "invalid credentials"));
         }
 
-        HttpSession session = request.getSession(true);
-        session.setAttribute("isAdmin", true);
-        session.setAttribute("adminUsername", user.getUsername());
+        // Generate JWT token
+        String token = jwtTokenProvider.generateToken(user.getUsername());
 
-        return ResponseEntity.ok(Map.of("message", "ok"));
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "username", user.getUsername(),
+                "message", "ok"
+        ));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    public ResponseEntity<?> logout() {
+        // JWT logout is handled by client removing token from localStorage
         return ResponseEntity.ok(Map.of("message", "logged out"));
     }
 
     @GetMapping("/status")
     public ResponseEntity<?> status(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        boolean isAdmin = session != null && Boolean.TRUE.equals(session.getAttribute("isAdmin"));
+        String authHeader = request.getHeader("Authorization");
+        boolean isAdmin = jwtTokenProvider.validateHeader(authHeader);
         return ResponseEntity.ok(Map.of("admin", isAdmin));
     }
 }

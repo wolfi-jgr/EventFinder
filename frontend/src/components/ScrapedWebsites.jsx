@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE } from "../config";
+import { jsonFetch } from "../api.js";
 import "./ScrapedWebsites.css";
 
 export default function ScrapedWebsites({ authOptions = {} }) {
@@ -15,13 +15,7 @@ export default function ScrapedWebsites({ authOptions = {} }) {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/status`, {
-        ...authOptions,
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch website status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await jsonFetch(`/api/scraping/rules/status`);
       setWebsites(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);

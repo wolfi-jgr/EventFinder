@@ -6,11 +6,18 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import com.example.eventfinder.web.AdminAuthInterceptor;
+import com.example.eventfinder.security.JwtTokenProvider;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors-origins}")
     private String corsOrigins;
+
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public WebConfig(JwtTokenProvider jwtTokenProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
 
     @SuppressWarnings("null")
     @Override
@@ -20,21 +27,19 @@ public class WebConfig implements WebMvcConfigurer {
             registry.addMapping("/api/**")
                     .allowedOriginPatterns("*")
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*")
-                    .allowCredentials(true);
+                    .allowCredentials(false);
         } else {
             registry.addMapping("/api/**")
                     .allowedOrigins(corsOrigins.split(","))
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*")
-                    .allowCredentials(true);
+                    .allowCredentials(false);
         }
     }
 
         @Override
         public void addInterceptors(InterceptorRegistry registry) {
             // Protect scraping-related endpoints and other admin actions
-            registry.addInterceptor(new AdminAuthInterceptor())
+            registry.addInterceptor(new AdminAuthInterceptor(jwtTokenProvider))
                     .addPathPatterns("/api/scraping/**");
         }
 }
