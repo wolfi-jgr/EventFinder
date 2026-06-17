@@ -211,7 +211,6 @@ export default function App() {
   const handleLoginSubmit = async (event) => {
     event.preventDefault();
     setLoginError("");
-    setAdminLoggedIn(null);
 
     try {
       const response = await fetch(`${API_BASE}/api/admin/login`, {
@@ -235,12 +234,10 @@ export default function App() {
         //console.log("[Auth] token stored:", data.token ? `${data.token.slice(0,12)}...` : null);
       }
 
-      const isAdmin = await checkAdminStatus();
-      if (!isAdmin) {
-        throw new Error("Login succeeded but session verification failed");
-      }
-
+      setAdminLoggedIn(true);
       navigateTo(ADMIN_PATH);
+      
+
       setAdminUsername("");
       setAdminPassword("");
     } catch (err) {
