@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./ScrapingPanel.css";
-import { API_BASE } from "./config";
 import { APP_CONFIG } from "./config";
+import { fetchApi, jsonFetch } from "./api.js";
 
 export default function ScrapingPanel({ authOptions = {} }) {
   const [sites, setSites] = useState([]);
@@ -16,13 +16,8 @@ export default function ScrapingPanel({ authOptions = {} }) {
   const loadSites = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/status`, {
-        ...authOptions,
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSites(data);
-      }
+      const data = await jsonFetch(`/api/scraping/rules/status`);
+      setSites(data);
     } catch (err) {
       setMessage("Error loading sites: " + err.message);
     } finally {
@@ -35,11 +30,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     setMessage("Scraping all websites in progress... this may take a minute...");
     setScrapingResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/run`, {
-        method: "POST",
-        ...authOptions,
-      });
-      const result = await response.json();
+      const result = await jsonFetch(`/api/scraping/rules/run`, { method: "POST" });
       setScrapingResult(result);
       
       let totalNew = 0;
@@ -74,11 +65,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     setScrapingResult(null);
     try {
       console.log(`Initiating scraping for site: ${siteName}`);
-      const response = await fetch(`${API_BASE}/api/scraping/rules/site?siteName=${encodeURIComponent(siteName)}`, {
-        method: "POST",
-        ...authOptions,
-      });
-      const result = await response.json();
+      const result = await jsonFetch(`/api/scraping/rules/site?siteName=${encodeURIComponent(siteName)}`, { method: "POST" });
       
       if (result.error) {
         setMessage(`Error scraping ${siteName}: ${result.error}`);
@@ -97,10 +84,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
 
   const clearCache = async (siteName) => {
     try {
-      await fetch(`${API_BASE}/api/scraping/cache?siteName=${encodeURIComponent(siteName)}`, {
-        method: "DELETE",
-        ...authOptions,
-      });
+      await fetchApi(`/api/scraping/cache?siteName=${encodeURIComponent(siteName)}`, { method: "DELETE" });
       setMessage(`Cache cleared for ${siteName}`);
       await loadSites();
     } catch (err) {
@@ -120,11 +104,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     setMessage(`Deleting events for ${siteName}...`);
     setScrapingResult(null);
     try {
-      const response = await fetch(
-        `${API_BASE}/api/scraping/events/site?siteName=${encodeURIComponent(siteName)}`,
-        { method: "DELETE", ...authOptions }
-      );
-      const result = await response.json();
+      const result = await jsonFetch(`/api/scraping/events/site?siteName=${encodeURIComponent(siteName)}`, { method: "DELETE" });
 
       if (!response.ok || result.error) {
         setMessage(`Error deleting events for ${siteName}: ${result.error || "Unknown error"}`);
@@ -144,11 +124,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     setMessage("Syncing scrape rules from config...");
     setScrapingResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/scraping/rules/sync`, {
-        method: "POST",
-        ...authOptions,
-      });
-      const result = await response.json();
+      const result = await jsonFetch(`/api/scraping/rules/sync`, { method: "POST" });
 
       if (!response.ok || result.error) {
         setMessage(`Error syncing rules: ${result.error || "Unknown error"}`);
