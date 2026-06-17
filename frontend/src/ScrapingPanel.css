@@ -1,14 +1,15 @@
 .scraping-panel {
-  background: white;
   padding: 2rem;
   border-radius: 1rem;
   margin-top: 2rem;
   min-width: 0;
   overflow: hidden;
+  color: var(--ef-text-primary);
 }
 
 .scraping-panel h2 {
   margin-bottom: 1.5rem;
+  color: var(--ef-text-primary);
 }
 
 .actions {
@@ -19,7 +20,7 @@
 }
 
 .actions button {
-  background: #6c5ce7;
+  background: var(--ef-accent);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -30,35 +31,37 @@
 }
 
 .actions button:hover:not(:disabled) {
-  background: #5849c7;
+  background: var(--ef-accent-hover);
 }
 
 .actions button:disabled {
-  background: #ccc;
+  background: var(--ef-border-soft);
+  color: var(--ef-text-muted);
   cursor: not-allowed;
 }
 
 .message {
-  background: #e8f4f8;
   padding: 1rem;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
-  border-left: 4px solid #0984e3;
+  border-left: 4px solid var(--ef-accent);
+  background: var(--ef-bg-card);
+  color: var(--ef-text-primary);
   overflow-wrap: anywhere;
 }
 
 .scraping-result {
-  background: #f0f9ff;
   padding: 1.5rem;
   border-radius: 0.5rem;
   margin-bottom: 1.5rem;
-  border: 2px solid #0984e3;
+  border: 2px solid var(--ef-accent);
+  background: var(--ef-bg-card);
 }
 
 .scraping-result h3 {
   margin-top: 0;
   margin-bottom: 1rem;
-  color: #0984e3;
+  color: var(--ef-accent);
 }
 
 .result-stats {
@@ -69,30 +72,31 @@
 }
 
 .result-stats > div {
-  background: white;
   padding: 1rem;
   border-radius: 0.5rem;
   font-weight: 600;
+  background: var(--ef-bg-page-accent);
+  color: var(--ef-text-primary);
 }
 
 .errors {
   margin-top: 1rem;
-  background: #fff5f5;
+  background: var(--ef-bg-page-accent);
   padding: 1rem;
   border-radius: 0.5rem;
 }
 
 .errors h4 {
   margin-top: 0;
-  color: #e74c3c;
+  color: var(--ef-text-error);
 }
 
 .error-item {
   padding: 0.5rem;
-  background: white;
+  background: var(--ef-bg-card);
   margin-bottom: 0.5rem;
   border-radius: 0.25rem;
-  color: #c0392b;
+  color: var(--ef-text-error);
   font-size: 0.9rem;
 }
 
@@ -102,14 +106,20 @@
 
 .sources-list h3 {
   margin-bottom: 1rem;
+  color: var(--ef-text-primary);
 }
 
 .source-item {
-  background: #f8f9fa;
+  background: var(--ef-bg-card);
   padding: 1rem;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--ef-border-soft);
+  transition: border-color 0.2s ease;
+}
+
+.source-item:hover {
+  border-color: var(--ef-accent);
 }
 
 .source-info {
@@ -122,6 +132,7 @@
 
 .source-info strong {
   font-size: 1.1rem;
+  color: var(--ef-text-primary);
 }
 
 .status {
@@ -132,18 +143,18 @@
 }
 
 .status.enabled {
-  background: #d4edda;
-  color: #155724;
+  background: rgba(52, 168, 83, 0.2);
+  color: var(--ef-text-success);
 }
 
 .status.disabled {
-  background: #f8d7da;
-  color: #721c24;
+  background: rgba(234, 67, 53, 0.2);
+  color: var(--ef-text-error);
 }
 
 .badge {
-  background: #e7f3ff;
-  color: #0066cc;
+  background: var(--ef-accent-soft);
+  color: var(--ef-accent);
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -152,7 +163,7 @@
 
 .source-details {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--ef-text-muted);
   margin-top: 0.5rem;
   overflow-wrap: anywhere;
 }
@@ -161,8 +172,12 @@
   margin-bottom: 0.25rem;
 }
 
+.cached {
+  color: var(--ef-text-muted);
+}
+
 .error-message {
-  color: #e74c3c;
+  color: var(--ef-text-error);
   font-weight: 600;
   margin-top: 0.5rem;
 }
@@ -175,8 +190,8 @@
 }
 
 .source-actions button {
-  background: #74b9ff;
-  color: #0984e3;
+  background: var(--ef-accent-soft);
+  color: var(--ef-accent);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -186,8 +201,13 @@
   max-width: 100%;
 }
 
-.source-actions button:hover {
-  background: #54a3ff;
+.source-actions button:hover:not(:disabled) {
+  background: var(--ef-accent-soft-hover);
+}
+
+.source-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {

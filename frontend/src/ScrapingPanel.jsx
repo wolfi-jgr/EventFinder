@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./ScrapingPanel.css";
 import { API_BASE } from "./config";
+import { APP_CONFIG } from "./config";
 
 export default function ScrapingPanel({ authOptions = {} }) {
   const [sites, setSites] = useState([]);

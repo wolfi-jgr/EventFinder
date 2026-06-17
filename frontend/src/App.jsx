@@ -183,22 +183,17 @@ export default function App() {
       });
 
       const data = await response.json().catch(() => null);
-      const ok = data?.authenticated === true;
+      const isAdmin = data?.admin === true;
 
-      setAdminLoggedIn((prev) => {
-        // change this!!
-        if (prev === true && ok === false) {
-          return true;
-        }
-        return ok;
-      });
+      setAdminLoggedIn(isAdmin);
 
-      return ok;
-    } catch {
+      return isAdmin;
+    } catch { //defensive
       setAdminLoggedIn(false);
       return false;
     }
   }, []);
+
   useEffect(() => {
     checkAdminStatus();
   }, []);
@@ -220,14 +215,6 @@ export default function App() {
 
       const data = await response.json().catch(() => ({}));
 
-
-
-      // IMPORTANT: don't rely blindly on backend flag
-      // instead VERIFY session after login
-
-      // await handlePostLogin();
-      //////////////////////////////
-
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
       }
@@ -244,8 +231,6 @@ export default function App() {
     }
 
   };
-
-
 
   const logoutAdmin = async () => {
     try {
@@ -444,6 +429,18 @@ export default function App() {
             <h1>{APP_CONFIG.appName}</h1>
             <p>Scraping, rule sync and diagnostics live here.</p>
           </div>
+          <nav className="top-nav" aria-label="Primary navigation">
+          <button className="nav-link active" onClick={() => navigateTo("/")}>Events</button>
+          <button className="nav-link" onClick={() => navigateTo(ADMIN_PATH)}>Admin</button>
+          <button
+            className="nav-link theme-toggle-inline"
+            onClick={toggleThemeMode}
+            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {getThemeIcon(themeMode)}
+          </button>
+        </nav>
         </header>
 
         {/*AUTH STILL CHECKING */}

@@ -36,7 +36,6 @@ export const API_CONFIG = {
   defaultProtocol: "http",
   defaultHost: "localhost",
   defaultPort: 8080,
-  androidEmulatorHost: "10.0.2.2",
 };
 
 const youtubeLightColors = {
