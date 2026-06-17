@@ -33,6 +33,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-eventfinder}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-eventfinder}
       APP_CORS_ORIGINS: "${APP_CORS_ORIGINS:-*}"
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "${SERVER_SERVLET_SESSION_COOKIE_SECURE:-true}"
     volumes:
       - scraper_data_prod:/app/scraper-data
     ports:

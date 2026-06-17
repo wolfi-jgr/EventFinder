@@ -20,11 +20,13 @@ public class WebConfig implements WebMvcConfigurer {
             registry.addMapping("/api/**")
                     .allowedOriginPatterns("*")
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
                     .allowCredentials(true);
         } else {
             registry.addMapping("/api/**")
                     .allowedOrigins(corsOrigins.split(","))
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedHeaders("*")
                     .allowCredentials(true);
         }
     }
