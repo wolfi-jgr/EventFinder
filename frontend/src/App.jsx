@@ -3,6 +3,7 @@ import "./App.css";
 import ScrapingPanel from "./ScrapingPanel";
 import LocationSlider from "./components/LocationSlider";
 import ScrapedWebsites from "./components/ScrapedWebsites";
+import MenuButton from "./components/Menu/MenuButton";
 import { API_BASE } from "./config";
 import { applyFrontendTheme } from "./theme";
 import { APP_CONFIG } from "./config";
@@ -231,7 +232,6 @@ export default function App() {
       // Store JWT token in localStorage
       if (data.token) {
         setToken(data.token);
-        //console.log("[Auth] token stored:", data.token ? `${data.token.slice(0,12)}...` : null);
       }
 
       setAdminLoggedIn(true);
@@ -273,6 +273,52 @@ export default function App() {
       loadDataFromDatabase();
     }
   }, [isAdminRoute]);
+
+  // Generate menu items configuration
+  const getMenuItems = () => {
+    const items = [
+      {
+        id: "events",
+        icon: "🏠",
+        label: "Events",
+        onClick: () => navigateTo("/"),
+      },
+      {
+        id: "admin",
+        icon: "⚙️",
+        label: "Admin",
+        onClick: () => navigateTo(ADMIN_PATH),
+      },
+      {
+        id: "divider-1",
+        type: "divider",
+      },
+      {
+        id: "theme",
+        icon: getThemeIcon(themeMode),
+        label: themeMode === "dark" ? "Light Mode" : "Dark Mode",
+        type: "toggle",
+        isActive: themeMode === "dark",
+        onClick: toggleThemeMode,
+      },
+    ];
+
+    // Add logout button if on admin route and logged in
+    if (isAdminRoute && adminLoggedIn === true) {
+      items.push({
+        id: "divider-2",
+        type: "divider",
+      });
+      items.push({
+        id: "logout",
+        icon: "🚪",
+        label: "Logout",
+        onClick: logoutAdmin,
+      });
+    }
+
+    return items;
+  };
 
   const navigateTo = (path) => {
     const nextPath = path || "/";
@@ -440,18 +486,7 @@ export default function App() {
             <h1>{APP_CONFIG.appName}</h1>
             <p>Scraping, rule sync and diagnostics live here.</p>
           </div>
-          <nav className="top-nav" aria-label="Primary navigation">
-          <button className="nav-link active" onClick={() => navigateTo("/")}>Events</button>
-          <button className="nav-link" onClick={() => navigateTo(ADMIN_PATH)}>Admin</button>
-          <button
-            className="nav-link theme-toggle-inline"
-            onClick={toggleThemeMode}
-            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {getThemeIcon(themeMode)}
-          </button>
-        </nav>
+          <MenuButton menuItems={getMenuItems()} menuTitle="Menu" />
         </header>
 
         {/*AUTH STILL CHECKING */}
@@ -515,18 +550,7 @@ export default function App() {
           <h1>{APP_CONFIG.appName}</h1>
           <p>Discover events and places in {APP_CONFIG.cityLabel}</p>
         </div>
-        <nav className="top-nav" aria-label="Primary navigation">
-          <button className="nav-link active" onClick={() => navigateTo("/")}>Events</button>
-          <button className="nav-link" onClick={() => navigateTo(ADMIN_PATH)}>Admin</button>
-          <button
-            className="nav-link theme-toggle-inline"
-            onClick={toggleThemeMode}
-            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {getThemeIcon(themeMode)}
-          </button>
-        </nav>
+        <MenuButton menuItems={getMenuItems()} menuTitle="Menu" />
       </header>
 
       <section className="controls-toggle-row">
@@ -547,12 +571,12 @@ export default function App() {
             <input
               id="search"
               type="text"
-              placeholder="Artist, venue, genre..."
+              placeholder="artist, venue, genre..."
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
             />
           </div>
-          <div className="field">
+          <div className="field" style={{ display: "none" }}>
             <label htmlFor="source">Source</label>
             <select
               id="source"
@@ -618,7 +642,7 @@ export default function App() {
               onChange={(e) => handleDateToChange(e.target.value)}
             />
           </div>
-          <div className="field">
+          <div className="field" style={{display: "none"}}>
             <label htmlFor="sort">Sort</label>
             <select
               id="sort"
@@ -630,7 +654,7 @@ export default function App() {
               <option value="title">Title (A-Z)</option>
             </select>
           </div>
-          <button onClick={fetchData} disabled={loading}>
+          <button hidden onClick={fetchData} disabled={loading}>
             {loading ? loadingMessage || "Loading..." : "Refresh Data"}
           </button>
         </section>
@@ -780,15 +804,6 @@ export default function App() {
           </>
         )}
       </section>
-
-      <button
-        className="theme-fab"
-        onClick={toggleThemeMode}
-        aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      >
-        {getThemeIcon(themeMode)}
-      </button>
     </div>
   );
 }

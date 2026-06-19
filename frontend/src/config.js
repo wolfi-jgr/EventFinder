@@ -38,7 +38,7 @@ export const API_CONFIG = {
   defaultPort: 8080,
 };
 
-const youtubeLightColors = {
+const lightColors = {
   textPrimary: "#14213d",
   textMuted: "#5f6b82",
   textSubtle: "#3b4a63",
@@ -54,7 +54,7 @@ const youtubeLightColors = {
   accentSoftHover: "#ffd1d1",
 };
 
-const youtubeDarkColors = {
+const darkColors = {
   textPrimary: "#f1f1f1",
   textMuted: "#f1f1f1",
   textSubtle: "#d7d7d7",
@@ -72,12 +72,12 @@ const youtubeDarkColors = {
 
 export const FRONTEND_THEME = {
   fontFamily: '"Space Grotesk", "Segoe UI", sans-serif',
-  colors: youtubeLightColors,
+  colors: lightColors,
 };
 
 export const FRONTEND_THEME_DARK = {
   fontFamily: '"Space Grotesk", "Segoe UI", sans-serif',
-  colors: youtubeDarkColors,
+  colors: darkColors,
 };
 
 export const MOBILE_THEME_LIGHT = {

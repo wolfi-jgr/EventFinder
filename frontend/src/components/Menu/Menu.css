@@ -1,0 +1,49 @@
+/* Menu Container Styling */
+
+.menu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 250px;
+  max-width: 350px;
+}
+
+.menu-title {
+  margin: 0;
+  padding: 0 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ef-text-primary);
+  border-bottom: 2px solid var(--ef-border-soft);
+  padding-bottom: 0.75rem;
+}
+
+.menu-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+/* Dark mode support */
+:root[data-theme="dark"] .menu-title {
+  color: var(--ef-text-primary);
+  border-bottom-color: var(--ef-border-soft);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .menu-container {
+    min-width: 90vw;
+    max-width: 90vw;
+  }
+
+  .menu-title {
+    font-size: 1.15rem;
+  }
+
+  .menu-items-list {
+    max-height: 70vh;
+  }
+}

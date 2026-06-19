@@ -1,0 +1,81 @@
+/* Menu Item Styling */
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: none;
+  border: none;
+  color: var(--ef-text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border-left: 3px solid transparent;
+}
+
+.menu-item:hover:not(.disabled) {
+  background-color: var(--ef-bg-page);
+  border-left-color: var(--ef-accent);
+}
+
+.menu-item:active:not(.disabled) {
+  transform: scale(0.98);
+}
+
+.menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-item.active {
+  background-color: var(--ef-surface-elevated);
+  border-left-color: var(--ef-accent);
+  font-weight: 500;
+}
+
+.menu-item-icon {
+  font-size: 1.25rem;
+  min-width: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-item-label {
+  flex: 1;
+  text-align: left;
+}
+
+/* Divider line */
+.menu-divider {
+  height: 1px;
+  background-color: var(--ef-border-soft);
+  margin: 0.5rem 0;
+}
+
+/* Dark mode support */
+:root[data-theme="dark"] .menu-item:hover:not(.disabled) {
+  background-color: var(--ef-surface-elevated);
+  border-left-color: var(--ef-accent);
+}
+
+:root[data-theme="dark"] .menu-item.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left-color: var(--ef-accent);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .menu-item {
+    padding: 0.875rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .menu-item-icon {
+    font-size: 1.1rem;
+  }
+}
