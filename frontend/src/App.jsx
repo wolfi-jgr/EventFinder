@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import ScrapingPanel from "./ScrapingPanel";
 import LocationSlider from "./components/LocationSlider";
+import EventCard from "./components/EventCard";
 import ScrapedWebsites from "./components/ScrapedWebsites";
 import MenuButton from "./components/Menu/MenuButton";
 import { API_BASE } from "./config";
@@ -236,7 +237,7 @@ export default function App() {
 
       setAdminLoggedIn(true);
       navigateTo(ADMIN_PATH);
-      
+
 
       setAdminUsername("");
       setAdminPassword("");
@@ -642,7 +643,7 @@ export default function App() {
               onChange={(e) => handleDateToChange(e.target.value)}
             />
           </div>
-          <div className="field" style={{display: "none"}}>
+          <div className="field" style={{ display: "none" }}>
             <label htmlFor="sort">Sort</label>
             <select
               id="sort"
@@ -735,46 +736,32 @@ export default function App() {
       <section className="results">
         {activeTab === "events" && (
           <>
-            <h2>🎭 Events by Source</h2>
+            <h2>🎭 Events</h2>
             <p className="results-meta">
               Showing {filteredEvents.length} of {events.length} events
             </p>
+
             {filteredEvents.length === 0 && !loading ? (
               <p>No events found. Try refreshing.</p>
             ) : (
-              <div className="source-sections">
-                {Object.entries(groupEventsBySource())
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([source, locations]) => (
-                    <div key={source} className="source-section">
-                      <div className="source-header">
-                        <h3
-                          className="source-name"
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setSelectedSource(source)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setSelectedSource(source);
-                            }
-                          }}
-                        >
-                          🧭 <u>{source}</u>
-                        </h3>
-                      </div>
-                      <div className="source-locations">
-                        {Object.entries(locations)
-                          .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([location, sourceEvents]) => (
-                            <LocationSlider
-                              key={`${source}-${location}`}
-                              location={location}
-                              events={sourceEvents}
-                            />
-                          ))}
-                      </div>
-                    </div>
+              <div className="events-list">
+                {filteredEvents
+                  .sort((a, b) => {
+                    const dateA = new Date(
+                      a.startDateTime ||
+                      `${a.startDate}T${a.startTime || "00:00:00"}`
+                    );
+                    const dateB = new Date(
+                      b.startDateTime ||
+                      `${b.startDate}T${b.startTime || "00:00:00"}`
+                    );
+                    return dateA - dateB;
+                  })
+                  .map((event) => (
+                    <EventCard
+                      key={event.id || event.url || `${event.title}-${event.startDate}`}
+                      event={event}
+                    />
                   ))}
               </div>
             )}

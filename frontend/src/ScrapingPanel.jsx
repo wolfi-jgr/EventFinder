@@ -106,7 +106,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     try {
       const result = await jsonFetch(`/api/scraping/events/site?siteName=${encodeURIComponent(siteName)}`, { method: "DELETE" });
 
-      if (!response.ok || result.error) {
+      if (result?.error) {
         setMessage(`Error deleting events for ${siteName}: ${result.error || "Unknown error"}`);
       } else {
         setMessage(`✓ ${siteName}: deleted ${result.deleted || 0} event(s)`);
@@ -126,7 +126,7 @@ export default function ScrapingPanel({ authOptions = {} }) {
     try {
       const result = await jsonFetch(`/api/scraping/rules/sync`, { method: "POST" });
 
-      if (!response.ok || result.error) {
+      if (result?.error) {
         setMessage(`Error syncing rules: ${result.error || "Unknown error"}`);
         return;
       }

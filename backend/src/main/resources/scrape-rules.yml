@@ -100,3 +100,29 @@ scrape-rules:
       ai-enabled: false
       requires-detail-page-fetch: false
       notes: "Falter.at - semantic HTML with German day names parsed by parseGermanDayName()."
+
+    - site-name: meinbezirk.at
+      base-url: https://www.meinbezirk.at/event/wien/list/all
+      event-list-selector: body
+      event-item-selector: article.content-list-item.content-card
+      title-selector: h3.content-card-headline a
+      date-selector: .content-card-date-location li:first-child
+      venue-selector: .content-card-date-location li:nth-child(2)
+      link-selector: h3.content-card-headline a
+      image-selector: figure img
+      description-selector: .content-card-text p
+      date-format: "d. MMMM yyyy 'um' HH:mm"
+      date-locale: de-DE
+      extraction-mode: CSS_SELECTOR
+      category: Event
+      organizer: MeinBezirk
+      enabled: true
+      ai-enabled: true
+      requires-detail-page-fetch: false
+      notes: ""
+
+
+# https://www.wien.info/de/aktuell/veranstaltungen#/?seite=3&dr=2026-06-24,2026-07-08&f1=1060516,896982,896974,896978,896980,896984,896986,896990,896988,896992,896994,896996,896998,897000
+
+# https://www.wien.info/de/aktuell/veranstaltungen#/?f1=896974
+

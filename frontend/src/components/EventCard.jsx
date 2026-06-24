@@ -38,15 +38,15 @@ export default function EventCard({ event }) {
 
         {event.venue && (
           <div className="event-card-venue">
-            <span className="venue-icon">🎭</span>
+            <span className="venue-icon">📍</span>
             <span>{event.venue}</span>
           </div>
         )}
 
-        <div className="event-card-price">
+        {/* <div className="event-card-price">
           <span className="price-icon">💰</span>
           <span>{formatPrice()}</span>
-        </div>
+        </div> */}
 
         {event.description && (
           <p className="event-card-description">{event.description.substring(0, 100)}...</p>
