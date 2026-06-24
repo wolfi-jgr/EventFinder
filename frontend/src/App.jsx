@@ -744,7 +744,7 @@ export default function App() {
             {filteredEvents.length === 0 && !loading ? (
               <p>No events found. Try refreshing.</p>
             ) : (
-              <div className="events-list">
+              <div className="event-list">
                 {filteredEvents
                   .sort((a, b) => {
                     const dateA = new Date(
