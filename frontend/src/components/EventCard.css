@@ -109,18 +109,4 @@
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .event-card {
-    min-width: min(280px, calc(100vw - 7.5rem));
-    width: min(280px, calc(100vw - 7.5rem));
-    max-width: calc(100vw - 7.5rem);
-  }
-}
 
-@media (max-width: 480px) {
-  .event-card {
-    min-width: min(250px, calc(100vw - 6.5rem));
-    width: min(250px, calc(100vw - 6.5rem));
-    max-width: calc(100vw - 6.5rem);
-  }
-}
